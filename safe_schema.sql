@@ -44,10 +44,6 @@ CREATE OR REPLACE EXTERNAL TABLE `kleague-482106.Kleague_db.measurements`
   EUR_CMJ_SquatJ_ STRING,
   DSI_CMJ_IMTP_ STRING,
   Ham STRING,
-  Add STRING,
-  Abd STRING,
-  Flex STRING,
-  Strength_Sum STRING,
   APHV_Point_ STRING,
   HamECC_L_Point_ STRING,
   HamECC_R_Point_ STRING,
@@ -64,7 +60,18 @@ CREATE OR REPLACE EXTERNAL TABLE `kleague-482106.Kleague_db.measurements`
   _30m_sec__Point_ STRING,
   COD_Point_ STRING,
   COD_ball_Point_ STRING,
-  CMJ_Height_Point_ STRING
+  CMJ_Height_Point_ STRING,
+  CMJ_TakeoffConcentricPeakForce_Point_ STRING,
+  CMRJ_RSI_Point_ STRING,
+  SquatJ_Height_Point_ STRING,
+  IMTP_Point_ STRING,
+  EUR_CMJ_SquatJ_Point_ STRING,
+  DSI_CMJ_IMTP_Point_ STRING,
+  Strength_Sum_Point_ STRING,
+  Add STRING,
+  Abd STRING,
+  Flex STRING,
+  Strength_Sum STRING
 )
 OPTIONS (
   format = 'GOOGLE_SHEETS',
