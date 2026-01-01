@@ -14,11 +14,13 @@ def load_data(data_project, dataset, table):
     project_id = None
     
     # 1. Try Loading from Secrets (for Streamlit Cloud)
-    if "gcp_service_account" in st.secrets:
+    if "kleague_service_account" in st.secrets:
         try:
             scopes = ["https://www.googleapis.com/auth/cloud-platform", "https://www.googleapis.com/auth/drive"]
+            # Convert AttrDict to dict for safety
+            key_info = dict(st.secrets["kleague_service_account"])
             credentials = service_account.Credentials.from_service_account_info(
-                st.secrets["gcp_service_account"], scopes=scopes
+                key_info, scopes=scopes
             )
             project_id = credentials.project_id
         except Exception as e:
@@ -30,7 +32,11 @@ def load_data(data_project, dataset, table):
             credentials = service_account.Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE)
             project_id = credentials.project_id
         else:
-            raise FileNotFoundError(f"인증 파일(\'{SERVICE_ACCOUNT_FILE}\')을 찾을 수 없고, Secrets 설정도 없습니다.")
+            # Debugging Help: Show available keys
+            found_keys = list(st.secrets.keys())
+            raise FileNotFoundError(
+                f"인증 실패: 'kleague_service_account' 키가 Secrets에 없습니다. 현재 등록된 키: {found_keys}"
+            )
     
     # Client 생성
     client = bigquery.Client(credentials=credentials, project=project_id)

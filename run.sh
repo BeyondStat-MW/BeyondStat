@@ -12,4 +12,4 @@ python3 -m pip install -r requirements.txt
 
 # Streamlit 실행
 echo "🌐 웹 브라우저에서 대시보드를 엽니다..."
-python3 -m streamlit run app.py
+python3 -m streamlit run Home.py

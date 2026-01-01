@@ -5,3 +5,5 @@ google-cloud-bigquery
 db-dtypes
 plotly
 scipy
+google-auth
+google-auth-oauthlib
