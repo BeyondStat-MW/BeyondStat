@@ -2,6 +2,10 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+from utils import analysis_utils
+import numpy as np
+from utils import analysis_utils
+from functools import reduce
 import datetime
 import base64
 import time
@@ -304,7 +308,8 @@ def show_dashboard(df_raw=None): # df_raw is optional now as we use DB
         df_rehab = center_db.get_player_rehab(sel_pid_dash) if sel_pid_dash else pd.DataFrame()
         
         # Tabs
-        d_tab1, d_tab2, d_tab3, d_tab4, d_tab5 = st.tabs(["누적 데이터", "재활 현황", "VALD", "KEISER", "A400 Tool"])
+        # Tabs
+        d_tab1, d_tab2, d_tab3, d_tab_insight, d_tab4, d_tab_a400 = st.tabs(["누적 데이터", "재활 현황", "VALD", "Insight Analysis", "KEISER", "A400 Tool"])
         
         with d_tab1:
             if not df_rec.empty:
@@ -444,5 +449,110 @@ def show_dashboard(df_raw=None): # df_raw is optional now as we use DB
                  st.info(f"데이터가 없습니다. (ID: {player_name_query})")
                  st.caption("팁: DB의 이름과 VALD 시트의 이름이 정확히 일치해야 합니다.")
             
-        with d_tab5:
+        with d_tab_insight:
+            st.markdown('<div class="section-title">심층 분석 (Insight Analysis)</div>', unsafe_allow_html=True)
+            
+            # Helper to find columns with synonyms
+            def find_col(df, candidates):
+                cols_lower = {c.lower(): c for c in df.columns}
+                for cand in candidates:
+                    # 1. Exact or Underscore match (case insensitive)
+                    c_clean = cand.lower().replace(" ", "_")
+                    for cl, original in cols_lower.items():
+                        if c_clean in cl.replace(" ", "_"):
+                             return original
+                return None
+
+            # --- 1. EUR (CMJ + SJ) ---
+            st.markdown("### 1. Eccentric Utilization Ratio (EUR)")
+            # Try to get data from VALD tabs
+            # vald_data keys: "Make" (CMJ), "SJ", "Nordbord", "ForceFrame"
+            df_cmj = vald_data.get('Make', vald_data.get('CMJ', pd.DataFrame()))
+            df_sj = vald_data.get('SJ', pd.DataFrame())
+            
+            col_cmj = find_col(df_cmj, ['Jump Height', 'Height', 'Flight Time']) if not df_cmj.empty else None
+            col_sj = find_col(df_sj, ['Jump Height', 'Height']) if not df_sj.empty else None
+            
+            if col_cmj and col_sj:
+                 # Merge on Date (rounding to day)
+                 df_cmj['Date_Day'] = pd.to_datetime(df_cmj['Test_Date']).dt.date
+                 df_sj['Date_Day'] = pd.to_datetime(df_sj['Test_Date']).dt.date
+                 # Merge
+                 merged_eur = pd.merge(df_cmj, df_sj, on='Date_Day', suffixes=('_CMJ', '_SJ'))
+                 merged_eur['Name'] = player_name_query
+                 
+                 eur_df = analysis_utils.calculate_eur(merged_eur, f"{col_cmj}_CMJ", f"{col_sj}_SJ")
+                 if not eur_df.empty:
+                      fig_eur = analysis_utils.plot_eur(eur_df, f"{col_cmj}_CMJ", f"{col_sj}_SJ")
+                      st.plotly_chart(fig_eur, use_container_width=True)
+                 else:
+                      st.info("EUR 계산 불가 (날짜 매칭 실패 또는 데이터 부족)")
+            else:
+                 st.info("EUR 데이터 부족 (CMJ 또는 SJ 높이 데이터 누락)")
+
+            st.divider()
+
+            # --- 2. Asymmetry (SLJ) ---
+            st.markdown("### 2. Limb Asymmetry Watchlist")
+            # If SLJ table exists?
+            df_slj = vald_data.get('SJ', pd.DataFrame()) # Assuming SLJ might be mixed or missing
+            # Check for Asymmetry columns in CMJ or Nordbord if SLJ specific not found
+            # For now, placeholder
+            st.info("SLJ (Single Leg Jump) 데이터 연동 필요")
+
+            st.divider()
+
+            # --- 3. Groin Risk (ForceFrame) ---
+            st.markdown("### 3. Groin Risk (Add/Abd Ratio)")
+            df_ff = vald_data.get('ForceFrame', pd.DataFrame())
+            if not df_ff.empty:
+                 # Adductor
+                 c_add_l = find_col(df_ff, ['Adductor Max Force [L]', 'Add Max Force L', 'Left Adductor', 'Max Force Left'])
+                 c_add_r = find_col(df_ff, ['Adductor Max Force [R]', 'Add Max Force R', 'Right Adductor', 'Max Force Right'])
+                 # Abductor (often in separate test type rows in raw export, but if pivoted in DB...)
+                 # Assume wide format for now
+                 c_abd_l = find_col(df_ff, ['Abductor Max Force [L]', 'Abd Max Force L', 'Left Abductor'])
+                 c_abd_r = find_col(df_ff, ['Abductor Max Force [R]', 'Abd Max Force R', 'Right Abductor'])
+                 
+                 # If Abductor missing, maybe we can't calculate ratio.
+                 if c_add_l and c_add_r:
+                      df_ff['Name'] = player_name_query
+                      if c_abd_l and c_abd_r:
+                           groin_df = analysis_utils.calculate_groin_risk(df_ff, c_add_l, c_add_r, c_abd_l, c_abd_r)
+                           if not groin_df.empty:
+                                fig_groin = analysis_utils.plot_groin_risk(groin_df)
+                                st.plotly_chart(fig_groin, use_container_width=True)
+                           else:
+                                st.info("Groin Risk 계산 실패")
+                      else:
+                           st.warning("Abductor (외전근) 데이터 미식별. Ratio 계산 불가.")
+                 else:
+                      st.info("ForceFrame 필수 컬럼 식별 실패")
+            else:
+                 st.info("ForceFrame 데이터 없음")
+
+            st.divider()
+
+            # --- 4. Hamstring (NordBord) ---
+            st.markdown("### 4. Hamstring Robustness")
+            df_nb = vald_data.get('Nordbord', pd.DataFrame())
+            if not df_nb.empty:
+                 c_nb_l = find_col(df_nb, ['Max Force [L]', 'Max Force Left', 'Left Max Force'])
+                 c_nb_r = find_col(df_nb, ['Max Force [R]', 'Max Force Right', 'Right Max Force'])
+                 
+                 if c_nb_l and c_nb_r:
+                      df_nb['Name'] = player_name_query
+                      ham_df = analysis_utils.calculate_hamstring_robustness(df_nb, c_nb_l, c_nb_r)
+                      if not ham_df.empty:
+                           fig_ham = analysis_utils.plot_hamstring_robustness(ham_df)
+                           st.plotly_chart(fig_ham, use_container_width=True)
+                 else:
+                      st.info("NordBord 컬럼 식별 실패")
+            else:
+                 st.info("NordBord 데이터 없음")
+            
+        with d_tab4:
+             st.info("KEISER Analysis (준비 중)")
+
+        with d_tab_a400:
              st.components.v1.iframe("https://a400.onrender.com/", height=800, scrolling=True)

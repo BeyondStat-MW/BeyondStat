@@ -5,6 +5,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import os
 from utils.ui_utils import get_base64_of_bin_file
+from utils import analysis_utils
 
 def show_dashboard(df):
     # --- CSS Styling for "World Class" Design ---
@@ -455,191 +456,88 @@ def show_dashboard(df):
                     st.info("비교할 데이터가 없습니다.")
 
     # ==========================================
-    # Tab: Insight
+    # Tab: Insight Analysis (Standardized)
     # ==========================================
-
     elif "인사이트" in selected_tab:
-        # Insight Sidebar / Sub-nav
-        insight_tab = st.radio("Insight_Nav", 
-                               ["성숙도 (Maturation)", "상관관계 (Correlation Matrix)"], 
-                               horizontal=True, label_visibility="collapsed", key="insight_sub_nav")
-        st.write("")
+        st.markdown('<div class="section-title">심층 분석 (Insight Analysis)</div>', unsafe_allow_html=True)
         
-        if "성숙도" in insight_tab:
-             st.markdown('<div class="section-title">성숙도 분석 (Maturation Analysis)</div>', unsafe_allow_html=True)
+        # Filter (Reuse Protocol Filters or Simplified)
+        with st.container(border=True):
+             c_i1, c_i2 = st.columns(2)
+             all_test_ids = sorted([x for x in df['Test_ID'].unique() if pd.notna(x)], reverse=True)
+             sel_test_id = c_i1.selectbox("측정 차수 Select (Test ID)", ["All"] + all_test_ids, key="insight_test_id")
              
-             # Filter Section
-             with st.container(border=True):
-                 c_filter_1, c_filter_2 = st.columns([1, 2])
-                 with c_filter_1:
-                     all_test_ids = sorted([x for x in df['Test_ID'].unique() if pd.notna(x)], reverse=True)
-                     sel_test_id = st.selectbox("측정 차수 선택 (Test ID)", ["All"] + all_test_ids, index=0)
-                 with c_filter_2:
-                     st.info("ℹ️ 현재 성숙도 분석은 **'중1 (Middle 1)'** 학년 데이터를 기준으로 수행됩니다.")
-
-             sel_mat_grade = "중1"
-             mat_df = df[df['Grade'] == sel_mat_grade].copy()
-             if sel_test_id != 'All':
-                 mat_df = mat_df[mat_df['Test_ID'] == sel_test_id]
-             
-             st.write("")
-
-             if mat_df.empty:
-                 st.warning(f"⚠️ {sel_test_id} 기간에 해당하는 '중1' 데이터가 없습니다.")
-             else:
-                 # Row 1: RAE | Scatter
-                 r1_c1, r1_c2 = st.columns(2)
-                 
-                 # --- RAE (Relative Age Effect) ---
-                 with r1_c1:
-                     with st.container(border=True): # New Design Card
-                         st.markdown('<div class="section-title">상대적 연령 효과 (RAE)</div>', unsafe_allow_html=True)
-                         if 'Birth_Month' in mat_df.columns:
-                             rae_month_counts = mat_df['Birth_Month'].value_counts().reindex(range(1, 13), fill_value=0).reset_index()
-                             rae_month_counts.columns = ['Month', 'Count']
-                             
-                             def get_quarter_color(m):
-                                 if m <= 3: return 'Q1'
-                                 elif m <= 6: return 'Q2'
-                                 elif m <= 9: return 'Q3'
-                                 else: return 'Q4'
-                             rae_month_counts['Quarter'] = rae_month_counts['Month'].apply(get_quarter_color)
-                             
-                             # Custom Navy Palette for Quarters
-                             q_colors = {'Q1':'#1B263B', 'Q2':'#415A77', 'Q3':'#778DA9', 'Q4':'#E0E1DD'} 
-                             
-                             fig_rae = px.bar(
-                                 rae_month_counts, x='Month', y='Count', 
-                                 color='Quarter',
-                                 color_discrete_map=q_colors,
-                                 text='Count'
-                             )
-                             fig_rae.update_layout(
-                                 height=350, margin=dict(t=10, b=10, l=10, r=10),
-                                 xaxis=dict(tickmode='linear', tick0=1, dtick=1, title="월 (Month)", showgrid=False),
-                                 yaxis=dict(showgrid=True, gridcolor='#f1f1f1'),
-                                 paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
-                                 showlegend=True, legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
-                             )
-                             
-                             q1_sum = rae_month_counts[rae_month_counts['Quarter']=='Q1']['Count'].sum()
-                             q4_sum = rae_month_counts[rae_month_counts['Quarter']=='Q4']['Count'].sum()
-                             ratio = q1_sum / q4_sum if q4_sum > 0 else 0
-                             
-                             # Add Caption as Annotation for Perfect Alignment
-                             fig_rae.add_annotation(
-                                 text=f"📌 Q1(1~3월) vs Q4(10~12월) 비율: <b>{ratio:.1f}배</b>",
-                                 xref="paper", yref="paper",
-                                 x=0, y=-0.25, showarrow=False,
-                                 font=dict(size=12, color="#8D99AE")
-                             )
-                             
-                             st.plotly_chart(fig_rae, use_container_width=True, config={'displayModeBar': False})
-
-                 # --- Scatter (APHV vs Month) ---
-                 with r1_c2:
-                      with st.container(border=True):
-                         st.markdown('<div class="section-title">출생 월별 성숙도 (Month vs APHV)</div>', unsafe_allow_html=True)
-                         if 'APHV' in mat_df.columns and 'Birth_Month' in mat_df.columns:
-                             if 'Maturity_Cat' not in mat_df.columns:
-                                  def get_mat_cat(aphv):
-                                     if pd.isna(aphv): return "Unknown"
-                                     if aphv < 13.1: return 'Early (조기)'
-                                     elif aphv <= 15.1: return 'Average (평균)'
-                                     else: return 'Late (만기)'
-                                  mat_df['Maturity_Cat'] = mat_df['APHV'].apply(get_mat_cat)
-
-                             mat_df['Date_Seasonality'] = mat_df['Birth_date'].apply(lambda x: x.replace(year=2000) if pd.notnull(x) else pd.NaT)
-                             
-                             # Navy/Red Highlight Colors
-                             mat_colors = {'Early (조기)':'#EF233C', 'Average (평균)':'#415A77', 'Late (만기)':'#1B263B'}
-                             
-                             fig_scat = px.scatter(
-                                 mat_df, x='Date_Seasonality', y='APHV',
-                                 color='Maturity_Cat',
-                                 color_discrete_map=mat_colors,
-                                 hover_data=['Player']
-                             )
-                             fig_scat.update_layout(
-                                 height=350, margin=dict(t=10, b=10, l=10, r=10),
-                                 xaxis=dict(title="월 (Month)", tickformat="%m월", dtick="M1", showgrid=True, gridcolor='#f1f1f1'),
-                                 yaxis=dict(title="APHV", showgrid=True, gridcolor='#f1f1f1'),
-                                 paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
-                                 legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
-                             )
-                             st.plotly_chart(fig_scat, use_container_width=True, config={'displayModeBar': False})
-
-
-                 st.write("")
-                 
-                 # Row 2: Distribution | Velocity
-                 r2_c1, r2_c2 = st.columns(2)
-                 
-                 with r2_c1:
-                     with st.container(border=True):
-                         st.markdown('<div class="section-title">성숙도 분포 (APHV Distribution)</div>', unsafe_allow_html=True)
-                         if 'APHV' in mat_df.columns:
-                             import plotly.figure_factory as ff
-                             hist_vals = mat_df['APHV'].dropna()
-                             if len(hist_vals) > 1:
-                                 # Distplot with Navy color
-                                 fig_dist = ff.create_distplot([hist_vals], ['APHV'], show_hist=False, show_rug=False, colors=['#1B263B'])
-                                 
-                                 # Shaded Regions (Standard)
-                                 fig_dist.add_vrect(x0=10, x1=13.1, fillcolor="#EF233C", opacity=0.1, annotation_text="Early")
-                                 fig_dist.add_vrect(x0=13.1, x1=15.1, fillcolor="#8D99AE", opacity=0.1, annotation_text="Avg")
-                                 fig_dist.add_vrect(x0=15.1, x1=18, fillcolor="#2B2D42", opacity=0.1, annotation_text="Late")
-                                 
-                                 fig_dist.update_layout(
-                                     height=300, margin=dict(t=10, b=10, l=10, r=10), showlegend=False,
-                                     plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)'
-                                 )
-                                 st.plotly_chart(fig_dist, use_container_width=True, config={'displayModeBar': False})
-                             else:
-                                 st.info("데이터 부족")
-
-                 with r2_c2:
-                     with st.container(border=True):
-                         st.markdown('<div class="section-title">성장 속도 (Growth Velocity)</div>', unsafe_allow_html=True)
-                         target_players = mat_df['Player'].unique()
-                         history_df = df[df['Player'].isin(target_players)].copy()
-                         velocities = []
-                         if not history_df.empty:
-                             history_df = history_df.sort_values(['Player', 'Age'])
-                             for p in target_players:
-                                  p_df = history_df[history_df['Player'] == p]
-                                  if len(p_df) > 1:
-                                     p_df['H_Diff'] = p_df['Height'].diff()
-                                     p_df['Age_Diff'] = p_df['Age'].diff()
-                                     p_df = p_df[p_df['Age_Diff'] > 0] # Avoid zero division
-                                     p_df['Velocity'] = p_df['H_Diff'] / p_df['Age_Diff']
-                                     # Filter unreasonable values
-                                     p_df = p_df[(p_df['Velocity'] > 0) & (p_df['Velocity'] < 20) & (p_df['Age_Diff'] > 0.5)]
-                                     if not p_df.empty:
-                                         velocities.append(p_df[['Age', 'Velocity']])
-                         
-                         if velocities:
-                             vel_df = pd.concat(velocities)
-                             vel_df['Age_Rounded'] = vel_df['Age'].apply(lambda x: round(x * 2) / 2)
-                             avg_vel = vel_df.groupby('Age_Rounded')['Velocity'].mean().reset_index()
-                             
-                             fig_vel = px.line(avg_vel, x='Age_Rounded', y='Velocity', markers=True)
-                             fig_vel.update_layout(
-                                 height=300, margin=dict(t=10, b=10, l=10, r=10),
-                                 xaxis_title="나이 (Age)", yaxis_title="성장 속도 (cm/year)",
-                                 plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)'
-                             )
-                             fig_vel.update_traces(line_color='#1B263B', line_width=3, marker_size=6)
-                             
-                             # Peak Height Velocity Zone
-                             fig_vel.add_vrect(x0=13.5, x1=14.5, fillcolor="#EF233C", opacity=0.1, annotation_text="PHV Zone")
-                             st.plotly_chart(fig_vel, use_container_width=True, config={'displayModeBar': False})
-                         else:
-                             st.info("연속 측정 데이터가 부족하여 성장 속도를 계산할 수 없습니다.")
+             # Filter Data
+             df_insight = df.copy()
+             if sel_test_id != "All":
+                 df_insight = df_insight[df_insight['Test_ID'] == sel_test_id]
         
-        elif "상관관계" in insight_tab:
-            st.info("🚧 준비 중입니다 (상관관계 분석)")
+        if df_insight.empty:
+            st.warning("데이터가 없습니다.")
+        else:
+            # 1. EUR (Needs CMJ, SJ)
+            # Map Columns: K-League uses 'CMJ_Height_cm_', 'SquatJ_Height_cm_'
+            col_cmj = 'CMJ_Height_cm_' if 'CMJ_Height_cm_' in df_insight.columns else 'CMJ_Height_cm'
+            col_sj = 'SquatJ_Height_cm_' if 'SquatJ_Height_cm_' in df_insight.columns else 'SquatJ_Height_cm'
+            
+            st.markdown("### 1. Eccentric Utilization Ratio (EUR)")
+            eur_df = analysis_utils.calculate_eur(df_insight, col_cmj, col_sj)
+            if not eur_df.empty:
+                fig_eur = analysis_utils.plot_eur(eur_df, col_cmj, col_sj)
+                st.plotly_chart(fig_eur, use_container_width=True)
+            else:
+                st.info("데이터 부족 (CMJ/SquatJump)")
 
+            st.divider()
+
+            # 2. Asymmetry (Needs SLJ) -> Not in default K-League Metric Groups?
+            # Checking METRIC_GROUPS (Line 329): HamECC, HipAdd... No SLJ?
+            # If missing, skip or show check.
+            # Assuming 'SLJ_Height_cm_' might exist or we skip based on column existence.
+            col_slj_l = 'SLJ_Height_L_cm_' 
+            col_slj_r = 'SLJ_Height_R_cm_'
+            
+            if col_slj_l in df_insight.columns:
+                st.markdown("### 2. Limb Asymmetry Watchlist (SLJ)")
+                asy_df = analysis_utils.calculate_asymmetry(df_insight, col_slj_l, col_slj_r)
+                if not asy_df.empty:
+                    fig_asy = analysis_utils.plot_asymmetry(asy_df)
+                    st.plotly_chart(fig_asy, use_container_width=True)
+            
+            # 3. Groin Risk (Hip Add/Abd) -> Exists in Group '근력'
+            # 'HipAdd_L_N_', 'HipAbd_L_N_'
+            st.markdown("### 3. Groin Risk (Add/Abd Ratio)")
+            groin_df = analysis_utils.calculate_groin_risk(
+                df_insight, 'HipAdd_L_N_', 'HipAdd_R_N_', 'HipAbd_L_N_', 'HipAbd_R_N_'
+            )
+            if not groin_df.empty:
+                fig_groin = analysis_utils.plot_groin_risk(groin_df)
+                st.plotly_chart(fig_groin, use_container_width=True)
+            else:
+                 st.info("데이터 부족 (고관절 근력)")
+
+            st.divider()
+
+            # 4. Hamstring Robustness (HamECC) -> Exists 'HamECC_L_N_'
+            st.markdown("### 4. Hamstring Robustness")
+            c4_1, c4_2 = st.columns(2)
+            with c4_1:
+                 ham_df = analysis_utils.calculate_hamstring_robustness(
+                     df_insight, 'HamECC_L_N_', 'HamECC_R_N_'
+                 )
+                 if not ham_df.empty:
+                     fig_ham = analysis_utils.plot_hamstring_robustness(ham_df)
+                     st.plotly_chart(fig_ham, use_container_width=True)
+                 else:
+                     st.info("데이터 부족 (햄스트링)")
+            
+            # 5. Z-Score (CMJ)
+            st.markdown("### 5. Fatigue Monitoring (Z-Score)")
+            # Use 'df' as global history
+            z_df = analysis_utils.calculate_z_scores(df, df_insight, col_cmj)
+            if not z_df.empty:
+                fig_z = analysis_utils.plot_z_scores(z_df)
+                st.plotly_chart(fig_z, use_container_width=True)
 
     # ==========================================
     # Tab: Player (선수 상세) - NEW!
