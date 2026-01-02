@@ -10,6 +10,9 @@ from utils import auth
 st.set_page_config(page_title="K-League Platform", page_icon="⚽", layout="wide")
 
 # --- Authentication Logic ---
+# Strict Isolation: Always hide sidebar/header on this client page
+auth.inject_custom_css()
+
 if 'logged_in' not in st.session_state:
     st.session_state['logged_in'] = False
 

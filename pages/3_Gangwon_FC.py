@@ -5,6 +5,9 @@ st.set_page_config(layout="wide", page_title="Gangwon FC Dashboard", page_icon="
 # --- Authentication Logic (Gatekeeper) ---
 from utils import auth
 
+# Strict Isolation: Always hide sidebar/header on this client page
+auth.inject_custom_css()
+
 if 'logged_in' not in st.session_state:
     st.session_state['logged_in'] = False
 
