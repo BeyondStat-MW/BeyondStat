@@ -46,9 +46,10 @@ def inject_custom_css():
     Injects CSS to hide the sidebar and Streamlit header for a cleaner 'App-like' feel.
     Used for standalone client pages.
     """
+    """
     st.markdown("""
     <style>
-        [data-testid="stSidebar"] {display: none;}
+        [data-testid="stSidebarNav"] {display: none;}
         [data-testid="stHeader"] {visibility: hidden;}
     </style>
     """, unsafe_allow_html=True)

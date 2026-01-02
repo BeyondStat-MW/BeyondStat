@@ -145,18 +145,29 @@ with st.sidebar:
     )
     st.markdown("<br>", unsafe_allow_html=True)
 
-    st.markdown("### 📊 DASHBOARD")
-    if st.button("팀 대시보드 (Team)", use_container_width=True, type="primary" if st.session_state['gw_view_mode'] == 'Team Dashboard' else "secondary"):
-        st.session_state['gw_view_mode'] = 'Team Dashboard'
-        st.rerun()
-        
-    if st.button("선수 상세 분석 (Player)", use_container_width=True, type="primary" if st.session_state['gw_view_mode'] == 'Player Dashboard' else "secondary"):
-        st.session_state['gw_view_mode'] = 'Player Dashboard'
-        st.rerun()
-        
-    st.markdown("### 🧠 ANALYSIS")
-    if st.button("인사이트 분석 (Insight)", use_container_width=True, type="primary" if st.session_state['gw_view_mode'] == 'Insight Analysis' else "secondary"):
-        st.session_state['gw_view_mode'] = 'Insight Analysis'
+    st.markdown("### 📊 MENU")
+    
+    # Map friendly names to internal logic
+    menu_map = {
+        "팀 대시보드 (Team)": "Team Dashboard",
+        "선수 상세 분석 (Player)": "Player Dashboard",
+        "인사이트 분석 (Insight)": "Insight Analysis"
+    }
+    
+    # Reverse map for default index
+    reverse_map = {v: k for k, v in menu_map.items()}
+    default_index = list(menu_map.values()).index(st.session_state['gw_view_mode'])
+    
+    selected_menu = st.radio(
+        "이동할 메뉴를 선택하세요", 
+        list(menu_map.keys()), 
+        index=default_index,
+        label_visibility="collapsed"
+    )
+    
+    # Update Session State
+    if st.session_state['gw_view_mode'] != menu_map[selected_menu]:
+        st.session_state['gw_view_mode'] = menu_map[selected_menu]
         st.rerun()
     
     st.markdown("---")
