@@ -330,9 +330,15 @@ elif st.session_state['gw_view_mode'] == 'Player Dashboard':
     player_list = data_loader.get_player_list()
     player_list = [p for p in player_list if isinstance(p, str)] # Simple clean
     
-    c_sel, _ = st.columns([1, 3])
+    c_header, c_sel = st.columns([3, 1])
     with c_sel:
-        selected_player = st.selectbox("Select Player", player_list)
+        selected_player = st.selectbox("Select Player", player_list, label_visibility='collapsed')
+    
+    with c_header:
+        if selected_player:
+            st.markdown(f"### 👤 선수별 분석 : {selected_player}")
+        else:
+            st.markdown("### 👤 선수별 분석")
         
     if selected_player:
         # Load Player Data
@@ -353,6 +359,27 @@ elif st.session_state['gw_view_mode'] == 'Player Dashboard':
             else:
                 df_p = calculate_derived_cols(df_p)
             
+            # --- Helper Function for Premium UI Cards ---
+            def create_detail_card(title, metrics, status_label, status_color):
+                """
+                Generates a premium-styled HTML card for player metrics.
+                metrics: List of (Label, ValueHTML) tuples. ValueHTML can contain spans with colors.
+                """
+                rows_html = ""
+                for label, val_html in metrics:
+                    rows_html += f"<div style='display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px;'><span style='color: #666; font-weight: 500;'>{label}</span><span style='font-weight: 700; color: #333;'>{val_html}</span></div>"
+                
+                # Single line strings to avoid markdown code block indentation issues
+                card_style = "background-color: white; border-radius: 12px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #f0f0f0; height: 100%; min-height: 260px; display: flex; flex-direction: column; justify-content: space-between;"
+                title_style = "font-size: 15px; font-weight: 800; color: #111; border-bottom: 2px solid #006442; padding-bottom: 8px; margin-bottom: 15px; letter-spacing: -0.3px;"
+                badge_style = f"display: inline-block; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; color: white; background-color: {status_color}; box-shadow: 0 2px 4px rgba(0,0,0,0.08);"
+                
+                html = f"<div style='{card_style}'>"
+                html += f"<div><div style='{title_style}'>{title}</div>{rows_html}</div>"
+                html += f"<div style='text-align: right; margin-top: 15px; border-top: 1px solid #eee; padding-top: 10px;'><span style='{badge_style}'>{status_label}</span></div>"
+                html += "</div>"
+                return html
+            
             # Identify correct columns (Prioritize trailing underscore versions if present)
             col_cmj = 'CMJ_Height_Imp_mom_' if 'CMJ_Height_Imp_mom_' in df_p.columns else 'CMJ_Height_Imp_mom'
             col_sj  = 'SquatJ_Height_Imp_mom_' if 'SquatJ_Height_Imp_mom_' in df_p.columns else 'SquatJ_Height_Imp_mom'
@@ -363,15 +390,20 @@ elif st.session_state['gw_view_mode'] == 'Player Dashboard':
             
             if not df_latest.empty:
                 latest_date = df_latest['Test_Date'].iloc[0]
-                st.markdown(f"#### 🔎 선수 심층 진단 (Deep Dive Check) <span style='font-size:14px; color:grey'>(Latest: {latest_date})</span>", unsafe_allow_html=True)
+            if not df_latest.empty:
+                latest_date = df_latest['Test_Date'].iloc[0]
+                # Title removed as per request, merged into top header implicitly or just subsection
+                # st.markdown(f"#### 🔎 선수 심층 진단 (Deep Dive Check) ...") -> Removed titles
+                # But kept section wrapper
+                st.markdown(f"<div style='margin-bottom:10px; font-size:14px; color:grey;'>Latest Test: {latest_date}</div>", unsafe_allow_html=True)
                 
                 # 1. EUR
                 eur_val = 0
                 eur_status = "N/A"
                 eur_color = "grey"
                 if col_cmj in df_latest.columns and col_sj in df_latest.columns:
-                    c_val = df_latest[col_cmj].fillna(0).iloc[0]
-                    s_val = df_latest[col_sj].fillna(0).iloc[0]
+                    c_val = pd.to_numeric(df_latest[col_cmj], errors='coerce').fillna(0).iloc[0]
+                    s_val = pd.to_numeric(df_latest[col_sj], errors='coerce').fillna(0).iloc[0]
                     if s_val > 0:
                         eur_val = c_val / s_val
                         if eur_val > 1.1: eur_status, eur_color = "Excellent (탄력 우수)", "#006442" # Green
@@ -428,26 +460,74 @@ elif st.session_state['gw_view_mode'] == 'Player Dashboard':
                 else:
                     groin_status, groin_color = "Stable (>0.8)", "#006442"
 
-                # Visualization (Cards)
-                chk_c1, chk_c2, chk_c3, chk_c4 = st.columns(4)
+                # Layout: 4x1 Grid
+                b1, b2, b3, b4 = st.columns(4)
                 
-                def card(col, label, value, color):
-                    col.markdown(f"""
-                    <div style="border:1px solid #ddd; padding:10px; border-radius:5px; border-left: 5px solid {color}; background-color: white;">
-                        <span style="font-size:12px; font-weight:bold; color:black;">{label}</span><br>
-                        <span style="font-size:16px; color:{color}; font-weight:bold;">{value}</span>
-                    </div>
-                    """, unsafe_allow_html=True)
+                col_L = "#56B4E9" # Sky Blue
+                col_R = "#F37021" # Orange
                 
-                card(chk_c1, "EUR (탄력성)", f"{eur_val:.2f}", eur_color)
-                card(chk_c2, "SLJ 불균형", slj_status, slj_color)
-                card(chk_c3, "햄스트링 불균형", ham_status, ham_color)
-                card(chk_c4, "서혜부(Groin) 리스크", groin_status, groin_color)
+                # --- Box 1: Jump & Elasticity ---
+                with b1:
+                    rsi_val = df_latest['CMJ_RSI_mod_Imp_mom_'].fillna(0).iloc[0] if 'CMJ_RSI_mod_Imp_mom_' in df_latest.columns else 0
+                    metrics_1 = [
+                        ("CMJ Height", f"{c_val:.1f} cm"),
+                        ("Squat Jump", f"{s_val:.1f} cm"),
+                        ("CMJ RSI-mod", f"{rsi_val:.2f}"),
+                        ("EUR", f"<span style='color:{eur_color}'>{eur_val:.2f}</span>")
+                    ]
+                    st.markdown(create_detail_card("⚡ Jump & Elasticity", metrics_1, eur_status, eur_color), unsafe_allow_html=True)
+
+                # --- Box 2: Single Leg Jump (Balance) ---
+                with b2:
+                    metrics_2 = [
+                        ("Left Height", f"<span style='color:{col_L}'>{l_val:.1f} cm</span>"),
+                        ("Right Height", f"<span style='color:{col_R}'>{r_val:.1f} cm</span>"),
+                        ("Asymmetry", f"<span style='color:{slj_color}'>{slj_asym:.1f}%</span>")
+                    ]
+                    st.markdown(create_detail_card("⚖️ Single Leg Jump", metrics_2, slj_status, slj_color), unsafe_allow_html=True)
+                
+                # --- Box 3: Hamstring (Strength) ---
+                with b3:
+                    # Get ISO Data
+                    iso_l = df_latest['Hamstring_ISO_L'].fillna(0).iloc[0] if 'Hamstring_ISO_L' in df_latest.columns else 0
+                    iso_r = df_latest['Hamstring_ISO_R'].fillna(0).iloc[0] if 'Hamstring_ISO_R' in df_latest.columns else 0
+                    max_iso = max(iso_l, iso_r)
+                    iso_asym = ((iso_r - iso_l) / max_iso * 100) if max_iso > 0 else 0
+                    
+                    # Ratio
+                    ecc_avg = (h_l + h_r) / 2
+                    iso_avg = (iso_l + iso_r) / 2
+                    ham_ratio = ecc_avg / iso_avg if iso_avg > 0 else 0
+                    
+                    # Ratio Status
+                    if ham_ratio < 1.1: h_r_stat, h_r_col = "Ecc Deficit", "#d62728"
+                    elif ham_ratio > 1.15: h_r_stat, h_r_col = "Iso Deficit", "#F37021"
+                    else: h_r_stat, h_r_col = "Optimal", "#00CCA3"
+                    
+                    metrics_3 = [
+                        ("Eccentric (L/R)", f"<span style='color:{col_L}'>{h_l:.0f}</span> / <span style='color:{col_R}'>{h_r:.0f} N</span>"),
+                        ("Isometric (L/R)", f"<span style='color:{col_L}'>{iso_l:.0f}</span> / <span style='color:{col_R}'>{iso_r:.0f} N</span>"),
+                        ("Ecc/Iso Ratio", f"<span style='color:{h_r_col}'>{ham_ratio:.2f}</span>")
+                    ]
+                    st.markdown(create_detail_card("🦵 Hamstring Profile", metrics_3, h_r_stat, h_r_col), unsafe_allow_html=True)
+                    
+                # --- Box 4: Groin (Strength) ---
+                with b4:
+                    add_asym = ((add_r - add_l) / max(add_l, add_r) * 100) if max(add_l, add_r) > 0 else 0
+                    abd_asym = ((abd_r - abd_l) / max(abd_l, abd_r) * 100) if max(abd_l, abd_r) > 0 else 0
+                    
+                    metrics_4 = [
+                        ("Adduction (L/R)", f"<span style='color:{col_L}'>{add_l:.0f}</span> / <span style='color:{col_R}'>{add_r:.0f} N</span>"),
+                        ("Abduction (L/R)", f"<span style='color:{col_L}'>{abd_l:.0f}</span> / <span style='color:{col_R}'>{abd_r:.0f} N</span>"),
+                        ("Add/Abd Ratio", f"<span style='color:{groin_color}'>{ratio_l:.2f} / {ratio_r:.2f}</span>")
+                    ]
+                    st.markdown(create_detail_card("🛡️ Groin Profile", metrics_4, groin_status, groin_color), unsafe_allow_html=True)
             
             st.divider()
 
             # --- Trends Charts ---
-            st.subheader(f"📈 선수별 트렌드 분석: {selected_player}")
+            # --- Trends Charts ---
+            st.subheader("📈 트렌드 분석 (Trend Analysis)")
             
             def create_trend_chart(df, metrics_dict, title, chart_type='line'):
                 """
@@ -710,32 +790,116 @@ elif st.session_state['gw_view_mode'] == 'Player Dashboard':
                 }, "Single Leg Jump", 'line')
 
             # 2. Strength Metrics (Diverging Bar Charts)
+            def create_ratio_dot_chart(df, col_ratio, title, safe_min, safe_max, x_range=[0, 1.5]):
+                """
+                Generates Scatter Plot for Ratio Trend (Y: Date, X: Ratio).
+                x_range: [min, max] for X-axis
+                """
+                if df.empty: return
+
+                # Prepare Data
+                df_chart = df.sort_values('Test_Date', ascending=True).copy()
+                try:
+                    df_chart['Date_Str'] = df_chart['Test_Date'].dt.strftime('%Y-%m-%d')
+                except:
+                    df_chart['Date_Str'] = df_chart['Test_Date'].astype(str)
+                
+                # Colors based on safe range
+                def get_color(val):
+                    if val >= safe_min and val <= safe_max: return '#006442' # Green
+                    if val < safe_min * 0.9 or val > safe_max * 1.1: return '#d62728' # Red
+                    return '#F37021' # Orange (Warning)
+                
+                df_chart['Color'] = df_chart[col_ratio].apply(get_color)
+                
+                fig = go.Figure()
+                
+                # Add Points
+                fig.add_trace(go.Scatter(
+                    y=df_chart['Date_Str'],
+                    x=df_chart[col_ratio],
+                    mode='markers+lines',
+                    marker=dict(color=df_chart['Color'], size=10, symbol='circle', line=dict(width=1, color='white')),
+                    line=dict(color='#cccccc', width=1, dash='dot'),
+                    hovertemplate='Ratio: %{x:.2f}<br>Date: %{y}<extra></extra>'
+                ))
+                
+                # Add Background Zones
+                # Risk Zone 1 (Low): range_min to safe_min
+                fig.add_vrect(
+                    x0=x_range[0], x1=safe_min,
+                    fillcolor="red", opacity=0.05,
+                    layer="below", line_width=0,
+                )
+                
+                # Safe Zone (Green): safe_min to safe_max
+                fig.add_vrect(
+                    x0=safe_min, x1=safe_max,
+                    fillcolor="green", opacity=0.1,
+                    layer="below", line_width=0,
+                )
+                
+                # Risk Zone 2 (High): safe_max to range_max
+                fig.add_vrect(
+                    x0=safe_max, x1=x_range[1],
+                    fillcolor="red", opacity=0.05,
+                    layer="below", line_width=0,
+                )
+                
+                fig.update_layout(
+                    title=dict(text=title, font=dict(size=14)),
+                    yaxis=dict(type='category', title=None),
+                    xaxis=dict(
+                        title='Ratio',
+                        tickformat='.2f',
+                        zeroline=False,
+                        range=x_range,
+                        dtick=0.1
+                    ),
+                    margin=dict(t=50, b=50, l=50, r=20),
+                    height=400,
+                    showlegend=False
+                )
+                
+                st.plotly_chart(fig, use_container_width=True)
+
+            # 2. Strength Metrics (3x2 Grid)
             st.markdown("### 💪 근력 분석 (Strength Metrics)")
-            s_c1, s_c2 = st.columns(2)
             
-            with s_c1:
+            # Create Ratio Columns for Trend
+            if 'Hamstring_Ecc_L' in df_p.columns and 'Hamstring_ISO_L' in df_p.columns:
+                 ecc_sum = df_p['Hamstring_Ecc_L'].fillna(0) + df_p['Hamstring_Ecc_R'].fillna(0)
+                 iso_sum = df_p['Hamstring_ISO_L'].fillna(0) + df_p['Hamstring_ISO_R'].fillna(0)
+                 df_p['Hamstring_Ratio_Trend'] = np.where(iso_sum > 0, ecc_sum / iso_sum, 0)
+            
+            if 'HipAdd_L' in df_p.columns and 'HipAbd_L' in df_p.columns:
+                 add_sum = df_p['HipAdd_L'].fillna(0) + df_p['HipAdd_R'].fillna(0)
+                 abd_sum = df_p['HipAbd_L'].fillna(0) + df_p['HipAbd_R'].fillna(0)
+                 df_p['Hip_Ratio_Trend'] = np.where(abd_sum > 0, add_sum / abd_sum, 0)
+
+            # --- Row 1: Hamstring ---
+            r1_c1, r1_c2, r1_c3 = st.columns(3)
+            with r1_c1:
                 create_strength_diverging_chart(df_p, 'Hamstring_Ecc_L', 'Hamstring_Ecc_R', "Hamstring Eccentric (L/R)")
-                create_strength_diverging_chart(df_p, 'HipAdd_L', 'HipAdd_R', "Hip Adduction (L/R)")
-                
-            with s_c2:
+            with r1_c2:
                 create_strength_diverging_chart(df_p, 'Hamstring_ISO_L', 'Hamstring_ISO_R', "Hamstring Isometric (L/R)")
-                create_strength_diverging_chart(df_p, 'HipAbd_L', 'HipAbd_R', "Hip Abduction (L/R)")
-                
+            with r1_c3:
+                # Hamstring Ratio Trend (Target 1.1 ~ 1.15) [Range: 0.8 ~ 1.2]
+                create_ratio_dot_chart(df_p, 'Hamstring_Ratio_Trend', 'Hamstring Ratio Trend (Ecc/Iso)', 1.1, 1.15, [0.8, 1.2])
+
+            # --- Row 2: Hip ---
+            r2_c1, r2_c2, r2_c3 = st.columns(3)
+            with r2_c1:
+                 create_strength_diverging_chart(df_p, 'HipAdd_L', 'HipAdd_R', "Hip Adduction (L/R)")
+            with r2_c2:
+                 create_strength_diverging_chart(df_p, 'HipAbd_L', 'HipAbd_R', "Hip Abduction (L/R)")
+            with r2_c3:
+                 # Hip Ratio Trend (Target 0.9 ~ 1.0) [Range: 0.5 ~ 1.5]
+                 create_ratio_dot_chart(df_p, 'Hip_Ratio_Trend', 'Hip Ratio Trend (Add/Abd)', 0.9, 1.0, [0.5, 1.5])
+                 
             st.divider()
                 
-            # --- Data Table ---
-            st.markdown("### 📋 데이터 로그 (Data Log)")
-            # Show ALL columns (sorted by date)
-            # Apply formatting ONLY to numeric columns to avoid "Unknown format code 'f' for object of type 'str'"
-            
-            # Identify numeric columns for formatting
-            numeric_cols = df_p.select_dtypes(include=[np.number]).columns.tolist()
-            
-            st.dataframe(
-                df_p.sort_values('Test_Date', ascending=False).style.format("{:.1f}", subset=numeric_cols, na_rep="-"),
-                use_container_width=True,
-                hide_index=True
-            )
+            # st.markdown("### 📋 데이터 로그 (Data Log)") removed as per request
 
 # --- VIEW: Insight Analysis ---
 elif st.session_state['gw_view_mode'] == 'Insight Analysis':
@@ -900,6 +1064,7 @@ elif st.session_state['gw_view_mode'] == 'Insight Analysis':
                 delta_metrics_all = {
                     "Power: CMJ Height (Imp Momentum)": "CMJ_Height_Imp_mom_",
                     "Power: Squat Jump Height (Imp Momentum)": "SquatJ_Height_Imp_mom_",
+                    "Power: CMJ RSI-mod": "CMJ_RSI_mod_Imp_mom_",
                     "Strength: Hamstring Eccentric (Left)": "Hamstring_Ecc_L",
                     "Strength: Hamstring Eccentric (Right)": "Hamstring_Ecc_R",
                     "Strength: Hamstring Isometric (Left)": "Hamstring_ISO_L",
@@ -940,15 +1105,30 @@ elif st.session_state['gw_view_mode'] == 'Insight Analysis':
         with st.expander("ℹ️ EUR 지표란?"):
             st.markdown("""
             **신장 단축 주기 효율성 (EUR)** = CMJ / Squat Jump
-            - **> 1.1**: 우수한 탄력성. 신장-단축 주기(SSC)를 효율적으로 사용함.
-            - **1.0 - 1.1**: 정상 범위.
-            - **< 1.0**: 낮은 탄력성. 순수 근력(Concentric) 의존도가 높음. **플라이오메트릭 훈련 권장.**
+            - **> 1.15**: **우수한 탄력성**. 신장-단축 주기(SSC)를 극대화하는 타입.
+            - **1.0 ~ 1.15**: **정상 범위**.
+            - **< 1.0**: **낮은 탄력성**. 순수 근력(Concentric) 의존도가 높고 탄력 활용이 부족함. **플라이오메트릭 훈련 권장.**
             """)
         
         eur_df = analysis_utils.calculate_eur(df_insight, col_cmj, col_sj)
         if not eur_df.empty:
-            fig_eur = analysis_utils.plot_eur(eur_df, col_cmj, col_sj)
-            if fig_eur: st.plotly_chart(fig_eur, use_container_width=True)
+            c_chart, c_list = st.columns([2.5, 1])
+            with c_chart:
+                fig_eur = analysis_utils.plot_eur(eur_df, col_cmj, col_sj)
+                if fig_eur: st.plotly_chart(fig_eur, use_container_width=True)
+            
+            with c_list:
+                st.markdown("##### 📋 Status Summary")
+                # Group by Status and list names
+                if 'Status' in eur_df.columns:
+                    for status_label in ['Low Elasticity (< 1.0)', 'Normal (1.0 - 1.15)', 'High Elasticity (> 1.15)']:
+                        subset = eur_df[eur_df['Status'] == status_label]
+                        count = len(subset)
+                        if count > 0:
+                            # Apply color style
+                            color = "red" if "Low" in status_label else "blue" if "Normal" in status_label else "green"
+                            st.markdown(f":{color}[**{status_label}**] ({count}명)")
+                            st.caption(", ".join(subset['Name'].tolist()))
         else:
             st.info("Insufficient data for EUR calculation (Missing CMJ or SquatJ).")
 
@@ -1013,9 +1193,30 @@ elif st.session_state['gw_view_mode'] == 'Insight Analysis':
         asy_df = analysis_utils.calculate_asymmetry(df_insight, col_l, col_r)
         
         if not asy_df.empty:
-
-            fig_lolly = analysis_utils.plot_asymmetry_lollipop(asy_df, threshold=ref_threshold)
-            if fig_lolly: st.plotly_chart(fig_lolly, use_container_width=True)
+            c_chart, c_list = st.columns([2.5, 1])
+            with c_chart:
+                fig_lolly = analysis_utils.plot_asymmetry_lollipop(asy_df, threshold=ref_threshold)
+                if fig_lolly: st.plotly_chart(fig_lolly, use_container_width=True)
+            
+            with c_list:
+                st.markdown("##### 📋 Imbalance Watchlist")
+                # Add Status
+                asy_df['Abs_Asy'] = asy_df['Asymmetry'].abs()
+                asy_df['Status'] = asy_df['Abs_Asy'].apply(lambda x: f"⚠️ High Risk (> {ref_threshold}%)" if x > ref_threshold else "✅ Normal")
+                
+                # Sort to show Risk first
+                risk_df = asy_df[asy_df['Abs_Asy'] > ref_threshold].sort_values('Abs_Asy', ascending=False)
+                normal_df = asy_df[asy_df['Abs_Asy'] <= ref_threshold]
+                
+                if not risk_df.empty:
+                    st.markdown(f":red[**High Risk ({len(risk_df)}명)**]")
+                    for _, row in risk_df.iterrows():
+                        st.caption(f"**{row['Name']}**: {row['Asymmetry']:.1f}%")
+                
+                if not normal_df.empty:
+                    st.markdown(f":blue[**Normal ({len(normal_df)}명)**]")
+                    with st.expander("명단 보기"):
+                         st.caption(", ".join(normal_df['Name'].tolist()))
 
         else:
             st.info(f"선택한 지표 ({asy_metric})에 대한 데이터가 부족합니다.")
@@ -1041,11 +1242,117 @@ elif st.session_state['gw_view_mode'] == 'Insight Analysis':
 
         groin_df = analysis_utils.calculate_groin_risk(df_insight, 'HipAdd_L', 'HipAdd_R', 'HipAbd_L', 'HipAbd_R')
         if not groin_df.empty:
-            fig_groin = analysis_utils.plot_groin_risk(groin_df)
-            if fig_groin: st.plotly_chart(fig_groin, use_container_width=True)
+            c_chart, c_list = st.columns([2.5, 1])
+            with c_chart:
+                fig_groin = analysis_utils.plot_groin_risk(groin_df)
+                if fig_groin: st.plotly_chart(fig_groin, use_container_width=True)
+            
+            with c_list:
+                st.markdown("##### 📋 Risk Summary")
+                # Classification Helper
+                def get_groin_status(r):
+                    if r < 0.80: return 'High Risk (< 0.80)'
+                    elif r < 0.90: return 'Watch (0.80 - 0.90)'
+                    else: return 'Good (> 0.90)'
+                    
+                groin_df['Status'] = groin_df['Ratio'].apply(get_groin_status)
+                
+                # Iterate status groups in order of severity
+                for status_label in ['High Risk (< 0.80)', 'Watch (0.80 - 0.90)', 'Good (> 0.90)']:
+                    subset = groin_df[groin_df['Status'] == status_label].sort_values('Ratio')
+                    if not subset.empty:
+                        color = "red" if "High Risk" in status_label else "orange" if "Watch" in status_label else "green"
+                        st.markdown(f":{color}[**{status_label}**] ({len(subset)}명)")
+                        if "Good" in status_label:
+                             with st.expander("명단 보기"):
+                                 st.caption(", ".join(subset['Name'].tolist()))
+                        else:
+                             for _, row in subset.iterrows():
+                                 st.caption(f"**{row['Name']}**: {row['Ratio']:.2f}")
         else:
              st.info("Insufficient data for Groin Risk.")
 
 
+        st.divider()
+
+        st.markdown("### 4. Hamstring Profiling (Functional Ratio)")
+        with st.expander("ℹ️ 햄스트링 기능적 비율 (Eccentric / Isometric)"):
+            st.markdown("""
+            **Eccentric Peak Force / Isometric Peak Force Ratio**:
+            - **적정 범위 (Optimal)**: 1.1 ~ 1.15
+            - **< 1.1**: **편심성 근력(Eccentric) 부족**. 제동 능력 강화를 위해 Nordic Hamstring 등 신장성 훈련 필요.
+            - **> 1.15**: **등척성 근력(Isometric) 부족**. 버티는 힘 강화를 위해 Isometric Hold 등 훈련 필요.
+            """)
+            
+        # Prepare Data for Scatter Plot (Average of L+R)
+        # Assuming columns exist based on schema check
+        iso_cols = ['Hamstring_ISO_L', 'Hamstring_ISO_R']
+        ecc_cols = ['Hamstring_Ecc_L', 'Hamstring_Ecc_R']
+        
+        ham_df = df_insight.copy()
+        
+        # Check if columns exist
+        has_iso = all([c in ham_df.columns for c in iso_cols])
+        has_ecc = all([c in ham_df.columns for c in ecc_cols])
+        
+        if has_iso and has_ecc:
+            # Calculate Averages (N)
+            ham_df['Hamstring_ISO_Mean'] = ham_df[iso_cols].mean(axis=1)
+            ham_df['Hamstring_Ecc_Mean'] = ham_df[ecc_cols].mean(axis=1)
+            
+            fig_ham = analysis_utils.plot_hamstring_functional_ratio(
+                ham_df, 
+                'Hamstring_ISO_Mean', 
+                'Hamstring_Ecc_Mean',
+                title="Hamstring Functional Profile: Eccentric vs Isometric"
+            )
+            
+            if fig_ham:
+                 c_chart, c_list = st.columns([2.5, 1])
+                 with c_chart:
+                     st.plotly_chart(fig_ham, use_container_width=True)
+                 
+                 with c_list:
+                     st.markdown("##### 📋 Training Focus")
+                     # Calculate Ratio locally for list
+                     ham_df['Ratio'] = ham_df['Hamstring_Ecc_Mean'] / ham_df['Hamstring_ISO_Mean'].replace(0, 0.001)
+                     
+                     def get_ham_status(r):
+                         if r < 1.1: return 'Eccentric Deficit'
+                         elif r > 1.15: return 'Isometric Deficit'
+                         else: return 'Optimal'
+                         
+                     ham_df['Status'] = ham_df['Ratio'].apply(get_ham_status)
+                     
+                     # Tabs for Compact Layout
+                     tab_ecc, tab_iso, tab_opt = st.tabs(["🔴 Eccentric", "🟠 Isometric", "🟢 Optimal"])
+                     
+                     with tab_ecc:
+                         subset = ham_df[ham_df['Status'] == 'Eccentric Deficit'].sort_values('Ratio')
+                         st.caption(f"**Need Eccentric ({len(subset)})**")
+                         if not subset.empty:
+                             st.dataframe(subset[['Name', 'Ratio']].style.format({'Ratio': '{:.2f}'}), hide_index=True, use_container_width=True, height=450)
+                         else:
+                             st.info("None")
+                             
+                     with tab_iso:
+                         subset = ham_df[ham_df['Status'] == 'Isometric Deficit'].sort_values('Ratio', ascending=False)
+                         st.caption(f"**Need Isometric ({len(subset)})**")
+                         if not subset.empty:
+                             st.dataframe(subset[['Name', 'Ratio']].style.format({'Ratio': '{:.2f}'}), hide_index=True, use_container_width=True, height=450)
+                         else:
+                             st.info("None")
+                             
+                     with tab_opt:
+                         subset = ham_df[ham_df['Status'] == 'Optimal']
+                         st.caption(f"**Optimal Zone ({len(subset)})**")
+                         if not subset.empty:
+                             st.caption(", ".join(subset['Name'].tolist()))
+                         else:
+                             st.info("None")
+            else:
+                st.warning("데이터가 부족하여 차트를 그릴 수 없습니다.")
+        else:
+            st.info("햄스트링 데이터(ISO/Ecc) 컬럼을 찾을 수 없습니다. 데이터 시트를 확인해주세요.")
 
 

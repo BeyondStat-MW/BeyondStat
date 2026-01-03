@@ -19,25 +19,47 @@ def calculate_eur(df, col_cmj, col_sj):
     
     eur_df = df.groupby('Name')[[col_cmj, col_sj]].mean().reset_index()
     eur_df['EUR'] = eur_df[col_cmj] / eur_df[col_sj]
+    
+    # Classification
+    def get_status(x):
+        if x > 1.15: return 'High Elasticity (> 1.15)'
+        elif x >= 1.0: return 'Normal (1.0 - 1.15)'
+        else: return 'Low Elasticity (< 1.0)'
+        
+    eur_df['Status'] = eur_df['EUR'].apply(get_status)
     return eur_df
 
 def plot_eur(eur_df, col_cmj, col_sj):
     """
-    Generates EUR Scatter Plot.
+    Generates EUR Scatter Plot with new thresholds.
     """
     if eur_df.empty: return None
     
+    color_map = {
+        'High Elasticity (> 1.15)': '#00CC96', # Green
+        'Normal (1.0 - 1.15)': '#636EFA',      # Blue/Purple
+        'Low Elasticity (< 1.0)': '#EF553B'    # Red
+    }
+    
     fig = px.scatter(eur_df, x=col_sj, y=col_cmj, text='Name', 
-                     color='EUR', color_continuous_scale='RdYlGn', 
+                     color='Status', color_discrete_map=color_map,
+                     hover_data=['EUR'],
                      size_max=10, 
                      labels={col_sj: "Squat Jump (cm)", col_cmj: "CMJ (cm)"},
                      title="Elasticity Profiling (CMJ vs SquatJump)")
     
     # Reference Lines
-    max_val = max(eur_df[col_cmj].max(), eur_df[col_sj].max())
-    fig.add_shape(type="line", x0=0, y0=0, x1=max_val, y1=max_val, line=dict(color="Gray", dash="dash"), name="EUR=1.0")
-    fig.add_shape(type="line", x0=0, y0=0, x1=max_val, y1=max_val*1.1, line=dict(color="Green", dash="dot"), name="EUR=1.1")
-    fig.update_traces(textposition='top center')
+    max_val = max(eur_df[col_cmj].max(), eur_df[col_sj].max()) * 1.1
+    
+    # 1.0 Line
+    fig.add_shape(type="line", x0=0, y0=0, x1=max_val, y1=max_val, line=dict(color="Gray", dash="dash"))
+    fig.add_annotation(x=max_val, y=max_val, text="EUR 1.0", showarrow=False)
+
+    # 1.15 Line
+    fig.add_shape(type="line", x0=0, y0=0, x1=max_val, y1=max_val*1.15, line=dict(color="Green", dash="dot"))
+    fig.add_annotation(x=max_val, y=max_val*1.15, text="EUR 1.15", showarrow=False)
+    
+    fig.update_traces(textposition='top center', marker=dict(size=10, line=dict(width=1, color='DarkSlateGrey')))
     return fig
 
 # ==============================================================================
@@ -56,7 +78,12 @@ def calculate_asymmetry(df, col_l, col_r):
     
     asy_df = valid_df.groupby('Name')[[col_l, col_r]].mean().reset_index()
     asy_df['Max_Val'] = asy_df[[col_l, col_r]].max(axis=1)
+    # Use standard formula implies Direction. (R-L)/Max. 
+    # But usually for 'Imbalance' magnitude we use Abs in reporting, but R-L is good for direction.
     asy_df['Asymmetry'] = ((asy_df[col_r] - asy_df[col_l]) / asy_df['Max_Val']) * 100
+    
+    # Default Classification (Threshold=15 as base, but can be overridden)
+    # We will just return the value. Classification creates 'Status' column if needed.
     return asy_df
 
 def plot_asymmetry_lollipop(asy_df, title="Limb Asymmetry Watchlist", threshold=10):
@@ -479,4 +506,81 @@ def plot_delta_chart(delta_df, metric_category):
     
     # Interpretation Guide
     fig.add_vline(x=0, line_width=1, line_color='black')
+    return fig
+
+# ==============================================================================
+# 8. Hamstring Functional Ratio (Eccentric / Isometric)
+# ==============================================================================
+def plot_hamstring_functional_ratio(df, iso_col, ecc_col, title="Hamstring Functional Ratio (Ecc vs Iso)"):
+    """
+    Plots a Scatter Chart for Hamstring Functional Ratio.
+    Ratio = Eccentric Force / Isometric Force.
+    Target Range: 1.1 ~ 1.15.
+    """
+    if df.empty or iso_col not in df.columns or ecc_col not in df.columns:
+        return None
+
+    plot_df = df.copy()
+    plot_df['ISO_Avg'] = plot_df[iso_col]
+    plot_df['ECC_Avg'] = plot_df[ecc_col]
+    
+    # Calculate Ratio for Color Coding
+    # Avoid division by zero
+    plot_df['Ratio'] = plot_df['ECC_Avg'] / plot_df['ISO_Avg'].replace(0, 0.001)
+    
+    def get_status(r):
+        if r < 1.1: return 'Eccentric Deficit (< 1.1)'
+        elif r > 1.15: return 'Isometric Deficit (> 1.15)'
+        else: return 'Optimal Zone (1.1-1.15)'
+        
+    plot_df['Status'] = plot_df['Ratio'].apply(get_status)
+    
+    # Define Colors
+    color_map = {
+        'Eccentric Deficit (< 1.1)': '#EF553B', # Red
+        'Optimal Zone (1.1-1.15)': '#00CC96',   # Green
+        'Isometric Deficit (> 1.15)': '#FFA15A' # Orange
+    }
+    
+    fig = px.scatter(
+        plot_df, 
+        x='ISO_Avg', 
+        y='ECC_Avg', 
+        color='Status',
+        color_discrete_map=color_map,
+        hover_data=['Name', 'Ratio'],
+        text='Name',
+        title=title
+    )
+    
+    fig.update_traces(textposition='top center', marker=dict(size=10, line=dict(width=1, color='DarkSlateGrey')))
+    
+    # Dynamic Range for Reference Lines
+    if plot_df['ISO_Avg'].max() > 0:
+        max_iso = plot_df['ISO_Avg'].max() * 1.2
+        max_ecc = plot_df['ECC_Avg'].max() * 1.2
+    else:
+        max_iso = 1000
+        max_ecc = 1200
+        
+    # Reference Lines (Diagonal)
+    # y = 1.1x (Lower Bound of Optimal)
+    fig.add_shape(type="line", x0=0, y0=0, x1=max_iso, y1=max_iso * 1.1,
+                  line=dict(color="Green", width=1, dash="dash"))
+    fig.add_annotation(x=max_iso, y=max_iso*1.1, text="Ratio 1.1", showarrow=False, yshift=10)
+
+    # y = 1.15x (Upper Bound of Optimal)
+    fig.add_shape(type="line", x0=0, y0=0, x1=max_iso, y1=max_iso * 1.15,
+                  line=dict(color="Green", width=1, dash="dash"))
+    fig.add_annotation(x=max_iso, y=max_iso*1.15, text="Ratio 1.15", showarrow=False, yshift=10)
+    
+    fig.update_layout(
+        xaxis_title="Isometric Peak Force (N)",
+        yaxis_title="Eccentric Peak Force (N)",
+        yaxis=dict(range=[0, max_ecc]),
+        xaxis=dict(range=[0, max_iso]),
+        legend_title="Start Training Focus",
+        height=600
+    )
+    
     return fig
