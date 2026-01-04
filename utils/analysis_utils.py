@@ -22,9 +22,9 @@ def calculate_eur(df, col_cmj, col_sj):
     
     # Classification
     def get_status(x):
-        if x > 1.15: return 'High Elasticity (> 1.15)'
-        elif x >= 1.0: return 'Normal (1.0 - 1.15)'
-        else: return 'Low Elasticity (< 1.0)'
+        if x > 1.15: return 'Strength (> 1.15)'
+        elif x >= 1.1: return 'Optimal (1.1 - 1.15)'
+        else: return 'Elastic (< 1.1)'
         
     eur_df['Status'] = eur_df['EUR'].apply(get_status)
     return eur_df
@@ -36,9 +36,9 @@ def plot_eur(eur_df, col_cmj, col_sj):
     if eur_df.empty: return None
     
     color_map = {
-        'High Elasticity (> 1.15)': '#00CC96', # Green
-        'Normal (1.0 - 1.15)': '#636EFA',      # Blue/Purple
-        'Low Elasticity (< 1.0)': '#EF553B'    # Red
+        'Strength (> 1.15)': '#EF553B',   # Red (or Orange depending on preference, let's use Red for "Strength Dom" warning if needed, or just distinct)
+        'Optimal (1.1 - 1.15)': '#00CC96', # Green
+        'Elastic (< 1.1)': '#636EFA'      # Blue
     }
     
     fig = px.scatter(eur_df, x=col_sj, y=col_cmj, text='Name', 

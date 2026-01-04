@@ -539,9 +539,9 @@ elif st.session_state['gw_view_mode'] == 'Player Dashboard':
 
                     if s_val > 0:
                         eur_val = c_val / s_val
-                        if eur_val > 1.15: eur_status, eur_color = "Excellent (탄력 우수)", "#006442" # Green
-                        elif eur_val > 1.0: eur_status, eur_color = "Normal (정상)", "#1f77b4" # Blue
-                        else: eur_status, eur_color = "Low (탄력 저하)", "#d62728" # Red
+                        if eur_val > 1.15: eur_status, eur_color = "Strength (근력 우세)", "#EF553B" # Red
+                        elif eur_val >= 1.1: eur_status, eur_color = "Optimal (이상적)", "#00CC96" # Green
+                        else: eur_status, eur_color = "Elastic (탄력적)", "#636EFA" # Blue
                     
                     if s_prev > 0:
                         eur_prev = c_prev / s_prev
@@ -1288,9 +1288,9 @@ elif st.session_state['gw_view_mode'] == 'Insight Analysis':
         with st.expander("ℹ️ EUR 지표란?"):
             st.markdown("""
             **신장 단축 주기 효율성 (EUR)** = CMJ / Squat Jump
-            - **> 1.15**: **우수한 탄력성**. 신장-단축 주기(SSC)를 극대화하는 타입.
-            - **1.0 ~ 1.15**: **정상 범위**.
-            - **< 1.0**: **낮은 탄력성**. 순수 근력(Concentric) 의존도가 높고 탄력 활용이 부족함. **플라이오메트릭 훈련 권장.**
+            - **< 1.1**: **Elastic (탄력적)**
+            - **1.1 ~ 1.15**: **Optimal (이상적)**
+            - **> 1.15**: **Strength (근력 우세)**
             """)
         
         eur_df = analysis_utils.calculate_eur(df_insight, col_cmj, col_sj)
@@ -1304,12 +1304,12 @@ elif st.session_state['gw_view_mode'] == 'Insight Analysis':
                 st.markdown("##### 📋 Status Summary")
                 # Group by Status and list names
                 if 'Status' in eur_df.columns:
-                    for status_label in ['Low Elasticity (< 1.0)', 'Normal (1.0 - 1.15)', 'High Elasticity (> 1.15)']:
+                    for status_label in ['Elastic (< 1.1)', 'Optimal (1.1 - 1.15)', 'Strength (> 1.15)']:
                         subset = eur_df[eur_df['Status'] == status_label]
                         count = len(subset)
                         if count > 0:
                             # Apply color style
-                            color = "red" if "Low" in status_label else "blue" if "Normal" in status_label else "green"
+                            color = "blue" if "Elastic" in status_label else "green" if "Optimal" in status_label else "red"
                             st.markdown(f":{color}[**{status_label}**] ({count}명)")
                             st.caption(", ".join(subset['Name'].tolist()))
         else:
