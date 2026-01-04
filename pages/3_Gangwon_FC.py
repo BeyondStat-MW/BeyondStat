@@ -532,7 +532,7 @@ elif st.session_state['gw_view_mode'] == 'Player Dashboard':
 
                     if s_val > 0:
                         eur_val = c_val / s_val
-                        if eur_val > 1.1: eur_status, eur_color = "Excellent (탄력 우수)", "#006442" # Green
+                        if eur_val > 1.15: eur_status, eur_color = "Excellent (탄력 우수)", "#006442" # Green
                         elif eur_val >= 1.0: eur_status, eur_color = "Normal (정상)", "#1f77b4" # Blue
                         else: eur_status, eur_color = "Low (탄력 저하)", "#d62728" # Red
                     
