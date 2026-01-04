@@ -85,7 +85,7 @@ st.markdown("접속할 플랫폼을 선택해주세요.")
 
 st.divider()
 
-col_k, col_y, col_g = st.columns(3, gap="large")
+col_k, col_y, col_g, col_yfc = st.columns(4, gap="large")
 
 role = st.session_state.get('role')
 
@@ -136,5 +136,21 @@ if role in ['gangwon', 'admin']:
         """, unsafe_allow_html=True)
         if st.button("입장하기 (Enter)", key="btn_g", type="primary", use_container_width=True):
             st.switch_page("pages/3_Gangwon_FC.py")
+
+# --- Yongin FC Card ---
+if role in ['yongin', 'admin']:
+    with col_yfc:
+        st.markdown("""
+        <div class="portal-card">
+            <div style="font-size: 50px; margin-bottom: 20px;">🐉</div>
+            <div class="card-title">Yongin FC Dashboard</div>
+            <div class="card-desc">
+                용인 FC 선수단 퍼포먼스 모니터링 시스템.<br>
+                VALD 측정 장비 데이터 및 부상 위험도 분석.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        if st.button("입장하기 (Enter)", key="btn_yfc", type="primary", use_container_width=True):
+            st.switch_page("pages/4_Yongin_FC.py")
 
 st.sidebar.success(f"로그인 계정: {st.session_state.get('current_user', 'Unknown')} ({role})")

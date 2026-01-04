@@ -7,7 +7,8 @@ USERS = {
     "admin":   {"password": "team1234",    "role": "admin"},
     "kleague": {"password": "kleague1234", "role": "kleague"},
     "yoon":    {"password": "yoon1234",    "role": "yoon"},
-    "gangwon": {"password": "gangwon1234", "role": "gangwon"}
+    "gangwon": {"password": "gangwon1234", "role": "gangwon"},
+    "yongin":  {"password": "yongin1234",  "role": "yongin"}
 }
 
 def authenticate_user(username, password, required_roles=None):
@@ -41,14 +42,17 @@ def logout():
             del st.session_state[key]
     st.rerun()
 
-def inject_custom_css():
+def inject_custom_css(hide_sidebar=True, hide_header=True):
     """
     Injects CSS to hide the sidebar and Streamlit header for a cleaner 'App-like' feel.
     Used for standalone client pages.
     """
-    st.markdown("""
+    sidebar_css = '[data-testid="stSidebarNav"] {display: none;}' if hide_sidebar else ''
+    header_css = '[data-testid="stHeader"] {visibility: hidden;}' if hide_header else ''
+    
+    st.markdown(f"""
     <style>
-        [data-testid="stSidebarNav"] {display: none;}
-        [data-testid="stHeader"] {visibility: hidden;}
+        {sidebar_css}
+        {header_css}
     </style>
     """, unsafe_allow_html=True)

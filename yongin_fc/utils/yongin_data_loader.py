@@ -9,9 +9,9 @@ from google.oauth2 import service_account
 import os
 
 # --- Configuration ---
-# Update this to the actual key file for Gangwon FC if available
-SERVICE_ACCOUNT_FILE = "gangwon-key.json" 
-PROJECT_ID = "gangwonfc"
+# Update this to the actual key file for Yongin FC
+SERVICE_ACCOUNT_FILE = "yongin-key.json" 
+PROJECT_ID = "yongfc_db"
 DATASET_ID = "vald_data"
 
 # --- Mock Data Generator (For Demo/Dev) ---
@@ -57,7 +57,7 @@ def get_db_client():
     ]
     
     # 1. Try Secrets (Cloud Deployment)
-    # Check for standard 'gcp_service_account' or custom 'gangwon_service_account'
+    # Check for standard 'gcp_service_account' or custom 'yongin_service_account'
     if "gcp_service_account" in st.secrets:
         try:
             # Create credentials from the secrets dictionary
@@ -70,9 +70,9 @@ def get_db_client():
         except Exception as e:
             print(f"Failed to load secrets: {e}")
 
-    elif "gangwon_service_account" in st.secrets:
+    elif "yongin_service_account" in st.secrets:
          try:
-            key_info = dict(st.secrets["gangwon_service_account"])
+            key_info = dict(st.secrets["yongin_service_account"])
             credentials = service_account.Credentials.from_service_account_info(
                 key_info, scopes=scopes
             )
@@ -80,7 +80,7 @@ def get_db_client():
             
     # 2. Try File (Local Development)
     if not credentials:
-        possible_paths = [SERVICE_ACCOUNT_FILE, os.path.join("gangwon_fc", SERVICE_ACCOUNT_FILE)]
+        possible_paths = [SERVICE_ACCOUNT_FILE, os.path.join("yongin_fc", SERVICE_ACCOUNT_FILE)]
         for path in possible_paths:
             if os.path.exists(path):
                 try:
@@ -135,9 +135,7 @@ def get_full_team_data():
                 
                 # Standardize Date
                 if 'Date' in df.columns:
-                    df['Test_Date'] = pd.to_datetime(df['Date'], errors='coerce')
-                    df.dropna(subset=['Test_Date'], inplace=True)
-                    df['Test_Date'] = df['Test_Date'].dt.date
+                    df['Test_Date'] = pd.to_datetime(df['Date']).dt.date
                 
                 # Ensure derived numeric columns exist (coerce errors to NaN)
                 numeric_candidates = [

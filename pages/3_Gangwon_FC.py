@@ -1,12 +1,12 @@
 # --- Page Config ---
 import streamlit as st
-st.set_page_config(layout="wide", page_title="Gangwon FC Dashboard", page_icon="⚽")
+st.set_page_config(layout="wide", page_title="Gangwon FC Dashboard", page_icon="⚽", initial_sidebar_state="expanded")
 
 # --- Authentication Logic (Gatekeeper) ---
 from utils import auth
 
-# Strict Isolation: Always hide sidebar/header on this client page
-auth.inject_custom_css()
+# Strict Isolation: Always# Hide Sidebar and Header for Strict Isolation
+auth.inject_custom_css(hide_sidebar=False, hide_header=False)
 
 if 'logged_in' not in st.session_state:
     st.session_state['logged_in'] = False
@@ -136,13 +136,23 @@ with st.sidebar:
     
     # --- Global Date Filter (Sidebar) ---
     st.markdown("### 📅 DATE FILTER")
-    start_date, end_date = st.slider(
-        "기간 선택",
-        min_value=min_date,
-        max_value=max_date,
-        value=(min_date, max_date),
-        format="YYYY-MM-DD"
-    )
+    
+    # Default to MOST RECENT date
+    default_start = max_date # Default to latest for Team Snapshot
+    default_end = max_date
+    
+    d_col1, d_col2 = st.columns(2)
+    with d_col1:
+        # Use session state keys for bidirectional update
+        if 'gw_start_date' not in st.session_state: st.session_state['gw_start_date'] = default_start
+        start_date = st.date_input("Start Date", min_value=min_date, max_value=max_date, key='gw_start_date')
+    with d_col2:
+        if 'gw_end_date' not in st.session_state: st.session_state['gw_end_date'] = default_end
+        end_date = st.date_input("End Date", min_value=min_date, max_value=max_date, key='gw_end_date')
+
+    if start_date > end_date:
+        st.error("종료일이 시작일보다 빠를 수 없습니다.")
+        
     st.markdown("<br>", unsafe_allow_html=True)
 
     st.markdown("### 📊 MENU")
@@ -253,22 +263,22 @@ if st.session_state['gw_view_mode'] == 'Team Dashboard':
     
     # 1. 7 KPI Boxes
     kpis = [
-        ("CMJ (Avg)", safe_mean(df_team, col_cmj)),
-        ("Squat Jump (Avg)", safe_mean(df_team, col_sj)),
-        ("Single Jump (Avg)", safe_mean(df_team, 'SLJ_Avg')),
-        ("Hamstring Ecc (Avg)", safe_mean(df_team, 'Hamstring_Ecc_Avg')),
-        ("Hamstring ISO (Avg)", safe_mean(df_team, 'Hamstring_ISO_Avg')),
-        ("Hip Add (Avg)", safe_mean(df_team, 'HipAdd_Avg')),
-        ("Hip Abd (Avg)", safe_mean(df_team, 'HipAbd_Avg')),
+        ("CMJ (Avg)", safe_mean(df_team, col_cmj), "cm"),
+        ("Squat Jump (Avg)", safe_mean(df_team, col_sj), "cm"),
+        ("Single Jump (Avg)", safe_mean(df_team, 'SLJ_Avg'), "cm"),
+        ("Hamstring Ecc (Avg)", safe_mean(df_team, 'Hamstring_Ecc_Avg'), "N"),
+        ("Hamstring ISO (Avg)", safe_mean(df_team, 'Hamstring_ISO_Avg'), "N"),
+        ("Hip Add (Avg)", safe_mean(df_team, 'HipAdd_Avg'), "N"),
+        ("Hip Abd (Avg)", safe_mean(df_team, 'HipAbd_Avg'), "N"),
     ]
     
     cols = st.columns(7)
-    for i, (label, val) in enumerate(kpis):
+    for i, (label, val, unit) in enumerate(kpis):
         with cols[i]:
             st.markdown(f"""
             <div class="kpi-card">
                 <div class="kpi-label" title="{label}">{label}</div>
-                <div class="kpi-value">{val:.1f}</div>
+                <div class="kpi-value">{val:.1f} <small style='font-size:12px; color:#888'>{unit}</small></div>
             </div>
             """, unsafe_allow_html=True)
             
@@ -277,7 +287,7 @@ if st.session_state['gw_view_mode'] == 'Team Dashboard':
     # 2. Charts Section (Power / Strength) - Vertical Layout
     
     # --- Power Metrics ---
-    st.subheader("⚡ 파워 분석 (Power Metrics)")
+    st.markdown("<h3 style='font-size: 24px; font-weight: 700; color: #111; margin-top: 20px; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 10px;'>⚡ 파워 분석 (Power Metrics)</h3>", unsafe_allow_html=True)
     metric_opt = st.selectbox("지표 선택 (Select Metric)", ["CMJ", "SquatJ", "SLJ"], key="team_pow")
     
     col_map = {
@@ -304,7 +314,7 @@ if st.session_state['gw_view_mode'] == 'Team Dashboard':
     st.markdown("<br>", unsafe_allow_html=True) # Spacer
 
     # --- Strength Metrics ---
-    st.subheader("💪 근력 분석 (Strength Metrics)")
+    st.markdown("<h3 style='font-size: 24px; font-weight: 700; color: #111; margin-top: 20px; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 10px;'>💪 근력 분석 (Strength Metrics)</h3>", unsafe_allow_html=True)
     metric_opt_s = st.selectbox("지표 선택 (Select Metric)", ["Hamstring Ecc", "Hamstring ISO", "HipAdd", "HipAbd"], key="team_str")
     
     col_map_s = {"Hamstring Ecc": "Hamstring_Ecc_Avg", "Hamstring ISO": "Hamstring_ISO_Avg", "HipAdd": "HipAdd_Avg", "HipAbd": "HipAbd_Avg"}
@@ -332,7 +342,44 @@ elif st.session_state['gw_view_mode'] == 'Player Dashboard':
     
     c_header, c_sel = st.columns([3, 1])
     with c_sel:
-        selected_player = st.selectbox("Select Player", player_list, label_visibility='collapsed')
+        # Callback for Player Change
+        def on_player_change():
+            new_player = st.session_state.gw_selected_player_box
+            st.session_state['gw_selected_player'] = new_player
+            
+            # Trigger Date Update
+            try:
+                # We need to import locally or rely on global data_loader if safe
+                # global data_loader is available
+                df_p_full = data_loader.load_player_data(new_player)
+                if not df_p_full.empty and 'Test_Date' in df_p_full.columns:
+                    p_min = df_p_full['Test_Date'].min()
+                    p_max = df_p_full['Test_Date'].max()
+                    st.session_state['gw_start_date'] = p_min
+                    st.session_state['gw_end_date'] = p_max
+            except Exception as e:
+                print(f"Error updating dates: {e}")
+
+        # Current selection init
+        if 'gw_selected_player' not in st.session_state:
+             st.session_state['gw_selected_player'] = player_list[0] if player_list else None
+             
+        # Find index
+        try:
+            p_index = player_list.index(st.session_state['gw_selected_player'])
+        except:
+            p_index = 0
+
+        selected_player = st.selectbox(
+            "Select Player", 
+            player_list, 
+            index=p_index,
+            label_visibility='collapsed', 
+            key='gw_selected_player_box',
+            on_change=on_player_change
+        )
+
+    
     
     with c_header:
         if selected_player:
@@ -351,11 +398,14 @@ elif st.session_state['gw_view_mode'] == 'Player Dashboard':
             # ts_start = pd.Timestamp(start_date) -> REVERTED
             # ts_end = pd.Timestamp(end_date)
             
-            mask_p = (df_p['Test_Date'] >= start_date) & (df_p['Test_Date'] <= end_date)
-            df_p = df_p.loc[mask_p]
+            # Apply Date Filter? 
+            # User Request: "Force to see all measured data" for selected player
+            # So we SKIP the sidebar filter for the trend charts here.
+            # mask_p = (df_p['Test_Date'] >= start_date) & (df_p['Test_Date'] <= end_date)
+            # df_p = df_p.loc[mask_p]
             
             if df_p.empty:
-                st.warning(f"No data for {selected_player} in the selected range.")
+                st.warning(f"No data for {selected_player}.")
             else:
                 df_p = calculate_derived_cols(df_p)
             
@@ -367,7 +417,7 @@ elif st.session_state['gw_view_mode'] == 'Player Dashboard':
                 """
                 rows_html = ""
                 for label, val_html in metrics:
-                    rows_html += f"<div style='display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px;'><span style='color: #666; font-weight: 500;'>{label}</span><span style='font-weight: 700; color: #333;'>{val_html}</span></div>"
+                    rows_html += f"<div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 13px;'><span style='color: #666; font-weight: 500; flex: 0 1 auto;'>{label}</span><span style='font-weight: 700; color: #333; flex: 1 0 auto; text-align: right; white-space: nowrap;'>{val_html}</span></div>"
                 
                 # Single line strings to avoid markdown code block indentation issues
                 card_style = "background-color: white; border-radius: 12px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #f0f0f0; height: 100%; min-height: 260px; display: flex; flex-direction: column; justify-content: space-between;"
@@ -385,12 +435,78 @@ elif st.session_state['gw_view_mode'] == 'Player Dashboard':
             col_sj  = 'SquatJ_Height_Imp_mom_' if 'SquatJ_Height_Imp_mom_' in df_p.columns else 'SquatJ_Height_Imp_mom'
 
             # --- 🔎 Player Deep Dive Check (Latest Status) ---
-            # Sort by date desc to get latest
-            df_latest = df_p.sort_values('Test_Date', ascending=False).head(1)
+            # Helper for Badge Style Delta
+            def format_delta_html(current_val, prev_val, unit="", inverse=False, decimal=1):
+                if pd.isna(current_val): return "N/A"
+                
+                # Formatted current value
+                val_str = f"{current_val:.{decimal}f} <small style='color:#888'>{unit}</small>"
+                
+                # Check for missing previous data
+                if pd.isna(prev_val) or prev_val == 0:
+                     # Display grey -% badge
+                     badge_html = f"""
+                    <div style='display:inline-flex; align-items:center; justify-content:flex-end;'>
+                        <span>{val_str}</span>
+                        <span style='
+                            background-color:#f0f0f0; 
+                            color:#999; 
+                            border-radius:12px; 
+                            padding:2px 6px; 
+                            font-size:10px; 
+                            font-weight:700; 
+                            margin-left:6px;
+                            white-space:nowrap;'>
+                            -%
+                        </span>
+                    </div>
+                    """
+                     return badge_html
+                
+                delta = ((current_val - prev_val) / prev_val) * 100
+                
+                # Colors
+                if inverse: # Lower is better (e.g. Asymmetry)
+                    is_good = delta <= 0
+                else: # Higher is better
+                    is_good = delta >= 0
+                    
+                color = "#006442" if is_good else "#d62728"
+                bg_color = "rgba(0, 100, 66, 0.1)" if is_good else "rgba(214, 39, 40, 0.1)"
+                     
+                sign = "+" if delta > 0 else ""
+                
+
+                badge_html = f"""
+                <div style='display:inline-flex; align-items:center; justify-content:flex-end;'>
+                    <span>{val_str}</span>
+                    <span style='
+                        background-color:{bg_color}; 
+                        color:{color}; 
+                        border-radius:12px; 
+                        padding:2px 6px; 
+                        font-size:10px; 
+                        font-weight:700; 
+                        margin-left:6px;
+                        white-space:nowrap;'>
+                        {sign}{delta:.1f}%
+                    </span>
+                </div>
+                """
+                return badge_html
+
+            # Sort by date desc to get latest 2 records
+            # Note: df_p is already filtered by Player
+            df_hist = df_p.sort_values('Test_Date', ascending=False).head(2)
             
-            if not df_latest.empty:
-                latest_date = df_latest['Test_Date'].iloc[0]
-            if not df_latest.empty:
+            if df_hist.empty:
+                st.info("선택한 선수의 데이터가 없습니다.")
+            else:
+                df_latest = df_hist.iloc[[0]]
+                if len(df_hist) > 1:
+                    df_prev = df_hist.iloc[[1]]
+                else:
+                    df_prev = pd.DataFrame() # No previous data
                 latest_date = df_latest['Test_Date'].iloc[0]
                 # Title removed as per request, merged into top header implicitly or just subsection
                 # st.markdown(f"#### 🔎 선수 심층 진단 (Deep Dive Check) ...") -> Removed titles
@@ -399,16 +515,29 @@ elif st.session_state['gw_view_mode'] == 'Player Dashboard':
                 
                 # 1. EUR
                 eur_val = 0
+                eur_prev = 0
                 eur_status = "N/A"
                 eur_color = "grey"
+                
                 if col_cmj in df_latest.columns and col_sj in df_latest.columns:
                     c_val = pd.to_numeric(df_latest[col_cmj], errors='coerce').fillna(0).iloc[0]
                     s_val = pd.to_numeric(df_latest[col_sj], errors='coerce').fillna(0).iloc[0]
+                    
+                    # Prev Data
+                    c_prev = 0
+                    s_prev = 0
+                    if not df_prev.empty:
+                        c_prev = pd.to_numeric(df_prev[col_cmj], errors='coerce').fillna(0).iloc[0]
+                        s_prev = pd.to_numeric(df_prev[col_sj], errors='coerce').fillna(0).iloc[0]
+
                     if s_val > 0:
                         eur_val = c_val / s_val
                         if eur_val > 1.1: eur_status, eur_color = "Excellent (탄력 우수)", "#006442" # Green
                         elif eur_val >= 1.0: eur_status, eur_color = "Normal (정상)", "#1f77b4" # Blue
                         else: eur_status, eur_color = "Low (탄력 저하)", "#d62728" # Red
+                    
+                    if s_prev > 0:
+                        eur_prev = c_prev / s_prev
 
                 # 2. SLJ Asymmetry
                 slj_asym = 0
@@ -469,20 +598,31 @@ elif st.session_state['gw_view_mode'] == 'Player Dashboard':
                 # --- Box 1: Jump & Elasticity ---
                 with b1:
                     rsi_val = df_latest['CMJ_RSI_mod_Imp_mom_'].fillna(0).iloc[0] if 'CMJ_RSI_mod_Imp_mom_' in df_latest.columns else 0
+                    rsi_prev = df_prev['CMJ_RSI_mod_Imp_mom_'].fillna(0).iloc[0] if not df_prev.empty and 'CMJ_RSI_mod_Imp_mom_' in df_prev.columns else 0
+                    
                     metrics_1 = [
-                        ("CMJ Height", f"{c_val:.1f} cm"),
-                        ("Squat Jump", f"{s_val:.1f} cm"),
-                        ("CMJ RSI-mod", f"{rsi_val:.2f}"),
-                        ("EUR", f"<span style='color:{eur_color}'>{eur_val:.2f}</span>")
+                        ("CMJ Height", format_delta_html(c_val, c_prev, "cm")),
+                        ("Squat Jump", format_delta_html(s_val, s_prev, "cm")),
+                        ("CMJ RSI-mod", format_delta_html(rsi_val, rsi_prev, "index")),
+                        ("EUR", format_delta_html(eur_val, eur_prev, "ratio", decimal=2))
                     ]
                     st.markdown(create_detail_card("⚡ Jump & Elasticity", metrics_1, eur_status, eur_color), unsafe_allow_html=True)
 
                 # --- Box 2: Single Leg Jump (Balance) ---
                 with b2:
+                    l_prev = df_prev[col_slj_l].fillna(0).iloc[0] if not df_prev.empty and col_slj_l in df_prev.columns else 0
+                    r_prev = df_prev[col_slj_r].fillna(0).iloc[0] if not df_prev.empty and col_slj_r in df_prev.columns else 0
+                    
+                    # Prev Asym
+                    max_slj_prev = max(l_prev, r_prev)
+                    slj_asym_prev = 0
+                    if max_slj_prev > 0:
+                        slj_asym_prev = ((r_prev - l_prev) / max_slj_prev) * 100
+                    
                     metrics_2 = [
-                        ("Left Height", f"<span style='color:{col_L}'>{l_val:.1f} cm</span>"),
-                        ("Right Height", f"<span style='color:{col_R}'>{r_val:.1f} cm</span>"),
-                        ("Asymmetry", f"<span style='color:{slj_color}'>{slj_asym:.1f}%</span>")
+                        ("Left Height", format_delta_html(l_val, l_prev, "cm")),
+                        ("Right Height", format_delta_html(r_val, r_prev, "cm")),
+                        ("Asymmetry", format_delta_html(slj_asym, slj_asym_prev, "%", inverse=True)) 
                     ]
                     st.markdown(create_detail_card("⚖️ Single Leg Jump", metrics_2, slj_status, slj_color), unsafe_allow_html=True)
                 
@@ -499,15 +639,25 @@ elif st.session_state['gw_view_mode'] == 'Player Dashboard':
                     iso_avg = (iso_l + iso_r) / 2
                     ham_ratio = ecc_avg / iso_avg if iso_avg > 0 else 0
                     
+                    # PREVIOUS DATA
+                    h_l_prev = df_prev['Hamstring_Ecc_L'].fillna(0).iloc[0] if not df_prev.empty and 'Hamstring_Ecc_L' in df_prev.columns else 0
+                    h_r_prev = df_prev['Hamstring_Ecc_R'].fillna(0).iloc[0] if not df_prev.empty and 'Hamstring_Ecc_R' in df_prev.columns else 0
+                    iso_l_prev = df_prev['Hamstring_ISO_L'].fillna(0).iloc[0] if not df_prev.empty and 'Hamstring_ISO_L' in df_prev.columns else 0
+                    iso_r_prev = df_prev['Hamstring_ISO_R'].fillna(0).iloc[0] if not df_prev.empty and 'Hamstring_ISO_R' in df_prev.columns else 0
+                    
+                    ecc_avg_prev = (h_l_prev + h_r_prev) / 2
+                    iso_avg_prev = (iso_l_prev + iso_r_prev) / 2
+                    ham_ratio_prev = ecc_avg_prev / iso_avg_prev if iso_avg_prev > 0 else 0
+
                     # Ratio Status
                     if ham_ratio < 1.1: h_r_stat, h_r_col = "Ecc Deficit", "#d62728"
                     elif ham_ratio > 1.15: h_r_stat, h_r_col = "Iso Deficit", "#F37021"
                     else: h_r_stat, h_r_col = "Optimal", "#00CCA3"
                     
                     metrics_3 = [
-                        ("Eccentric (L/R)", f"<span style='color:{col_L}'>{h_l:.0f}</span> / <span style='color:{col_R}'>{h_r:.0f} N</span>"),
-                        ("Isometric (L/R)", f"<span style='color:{col_L}'>{iso_l:.0f}</span> / <span style='color:{col_R}'>{iso_r:.0f} N</span>"),
-                        ("Ecc/Iso Ratio", f"<span style='color:{h_r_col}'>{ham_ratio:.2f}</span>")
+                        ("Eccentric (L/R)", f"<div style='display:flex; justify-content:flex-end; white-space:nowrap;'>{format_delta_html(h_l, h_l_prev, 'N')} <span style='margin:0 5px; color:#ccc'>/</span> {format_delta_html(h_r, h_r_prev, 'N')}</div>"),
+                        ("Isometric (L/R)", f"<div style='display:flex; justify-content:flex-end; white-space:nowrap;'>{format_delta_html(iso_l, iso_l_prev, 'N')} <span style='margin:0 5px; color:#ccc'>/</span> {format_delta_html(iso_r, iso_r_prev, 'N')}</div>"),
+                        ("Ecc/Iso Ratio", format_delta_html(ham_ratio, ham_ratio_prev, "ratio", decimal=2)) 
                     ]
                     st.markdown(create_detail_card("🦵 Hamstring Profile", metrics_3, h_r_stat, h_r_col), unsafe_allow_html=True)
                     
@@ -516,10 +666,19 @@ elif st.session_state['gw_view_mode'] == 'Player Dashboard':
                     add_asym = ((add_r - add_l) / max(add_l, add_r) * 100) if max(add_l, add_r) > 0 else 0
                     abd_asym = ((abd_r - abd_l) / max(abd_l, abd_r) * 100) if max(abd_l, abd_r) > 0 else 0
                     
+                    # Prev Groin
+                    add_l_prev = df_prev['HipAdd_L'].fillna(0).iloc[0] if not df_prev.empty and 'HipAdd_L' in df_prev.columns else 0
+                    add_r_prev = df_prev['HipAdd_R'].fillna(0).iloc[0] if not df_prev.empty and 'HipAdd_R' in df_prev.columns else 0
+                    abd_l_prev = df_prev['HipAbd_L'].fillna(0).iloc[0] if not df_prev.empty and 'HipAbd_L' in df_prev.columns else 0
+                    abd_r_prev = df_prev['HipAbd_R'].fillna(0).iloc[0] if not df_prev.empty and 'HipAbd_R' in df_prev.columns else 0
+                    
+                    ratio_l_prev = add_l_prev / abd_l_prev if abd_l_prev > 0 else 0
+                    ratio_r_prev = add_r_prev / abd_r_prev if abd_r_prev > 0 else 0
+                    
                     metrics_4 = [
-                        ("Adduction (L/R)", f"<span style='color:{col_L}'>{add_l:.0f}</span> / <span style='color:{col_R}'>{add_r:.0f} N</span>"),
-                        ("Abduction (L/R)", f"<span style='color:{col_L}'>{abd_l:.0f}</span> / <span style='color:{col_R}'>{abd_r:.0f} N</span>"),
-                        ("Add/Abd Ratio", f"<span style='color:{groin_color}'>{ratio_l:.2f} / {ratio_r:.2f}</span>")
+                        ("Adduction (L/R)", f"<div style='display:flex; justify-content:flex-end; white-space:nowrap;'>{format_delta_html(add_l, add_l_prev, 'N')} <span style='margin:0 5px; color:#ccc'>/</span> {format_delta_html(add_r, add_r_prev, 'N')}</div>"),
+                        ("Abduction (L/R)", f"<div style='display:flex; justify-content:flex-end; white-space:nowrap;'>{format_delta_html(abd_l, abd_l_prev, 'N')} <span style='margin:0 5px; color:#ccc'>/</span> {format_delta_html(abd_r, abd_r_prev, 'N')}</div>"),
+                        ("Add/Abd Ratio", f"<div style='display:flex; justify-content:flex-end; white-space:nowrap;'>{format_delta_html(ratio_l, ratio_l_prev, 'ratio', decimal=2)} <span style='margin:0 5px; color:#ccc'>/</span> {format_delta_html(ratio_r, ratio_r_prev, 'ratio', decimal=2)}</div>")
                     ]
                     st.markdown(create_detail_card("🛡️ Groin Profile", metrics_4, groin_status, groin_color), unsafe_allow_html=True)
             
@@ -527,8 +686,11 @@ elif st.session_state['gw_view_mode'] == 'Player Dashboard':
 
             # --- Trends Charts ---
             # --- Trends Charts ---
-            st.subheader("📈 트렌드 분석 (Trend Analysis)")
-            
+            st.markdown("<h3 style='font-size: 24px; font-weight: 700; color: #111; margin-top: 30px; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 10px;'>📈 트렌드 분석 (Trend Analysis)</h3>", unsafe_allow_html=True)
+            st.markdown("---") # Separator from detail cards
+
+
+
             def create_trend_chart(df, metrics_dict, title, chart_type='line'):
                 """
                 df: Dataframe
@@ -775,7 +937,7 @@ elif st.session_state['gw_view_mode'] == 'Player Dashboard':
                 )
                 
                 st.plotly_chart(fig, use_container_width=True)
-            st.markdown("### ⚡ 파워 분석 (Power Trends)")
+            st.markdown("<h4 style='font-size: 18px; font-weight: 600; color: #333; margin-top: 15px;'>⚡ 파워 분석 (Power Trends)</h4>", unsafe_allow_html=True)
             p_c1, p_c2, p_c3 = st.columns(3)
             
             with p_c1:
@@ -864,7 +1026,7 @@ elif st.session_state['gw_view_mode'] == 'Player Dashboard':
                 st.plotly_chart(fig, use_container_width=True)
 
             # 2. Strength Metrics (3x2 Grid)
-            st.markdown("### 💪 근력 분석 (Strength Metrics)")
+            st.markdown("<h4 style='font-size: 18px; font-weight: 600; color: #333; margin-top: 15px;'>💪 근력 분석 (Strength Metrics)</h4>", unsafe_allow_html=True)
             
             # Create Ratio Columns for Trend
             if 'Hamstring_Ecc_L' in df_p.columns and 'Hamstring_ISO_L' in df_p.columns:
@@ -890,16 +1052,15 @@ elif st.session_state['gw_view_mode'] == 'Player Dashboard':
             # --- Row 2: Hip ---
             r2_c1, r2_c2, r2_c3 = st.columns(3)
             with r2_c1:
-                 create_strength_diverging_chart(df_p, 'HipAdd_L', 'HipAdd_R', "Hip Adduction (L/R)")
+                create_strength_diverging_chart(df_p, 'HipAdd_L', 'HipAdd_R', "Hip Adduction (L/R)")
             with r2_c2:
-                 create_strength_diverging_chart(df_p, 'HipAbd_L', 'HipAbd_R', "Hip Abduction (L/R)")
+                create_strength_diverging_chart(df_p, 'HipAbd_L', 'HipAbd_R', "Hip Abduction (L/R)")
             with r2_c3:
                  # Hip Ratio Trend (Target 0.9 ~ 1.0) [Range: 0.5 ~ 1.5]
                  create_ratio_dot_chart(df_p, 'Hip_Ratio_Trend', 'Hip Ratio Trend (Add/Abd)', 0.9, 1.0, [0.5, 1.5])
                  
-            st.divider()
-                
-            # st.markdown("### 📋 데이터 로그 (Data Log)") removed as per request
+            st.markdown("<br>", unsafe_allow_html=True) # Spacer only, no divider
+
 
 # --- VIEW: Insight Analysis ---
 elif st.session_state['gw_view_mode'] == 'Insight Analysis':
@@ -948,7 +1109,7 @@ elif st.session_state['gw_view_mode'] == 'Insight Analysis':
 
     # 1. Periodic Diagnosis Mode
     if an_mode == "피지컬 종합 리포트 (Physical Report)":
-        st.subheader("📊 팀 피지컬 리포트 (Team Status)")
+        st.markdown("<h3 style='font-size: 24px; font-weight: 700; color: #111; margin-top: 20px; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 10px;'>📊 팀 피지컬 리포트 (Team Status)</h3>", unsafe_allow_html=True)
         
         # Calculate Tiers
         # Metrics: Power (CMJ, SJ), Strength (Hamstring, Hip), Balance (SLJ)
@@ -1034,7 +1195,7 @@ elif st.session_state['gw_view_mode'] == 'Insight Analysis':
 
     # 2. Development Tracker
     elif an_mode == "전후 비교 (Development Tracker)":
-        st.subheader("📈 Pre-Post Development Analysis")
+        st.markdown("<h3 style='font-size: 24px; font-weight: 700; color: #111; margin-top: 20px; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 10px;'>📈 Pre-Post Development Analysis</h3>", unsafe_allow_html=True)
         
         # Filter out NaT values before sorting
         valid_dates = df_global['Test_Date'].dropna().unique()
@@ -1101,7 +1262,7 @@ elif st.session_state['gw_view_mode'] == 'Insight Analysis':
         col_cmj = 'CMJ_Height_Imp_mom_' if 'CMJ_Height_Imp_mom_' in df_insight.columns else 'CMJ_Height_Imp_mom'
         col_sj  = 'SquatJ_Height_Imp_mom_' if 'SquatJ_Height_Imp_mom_' in df_insight.columns else 'SquatJ_Height_Imp_mom'
         
-        st.markdown("### 1. Eccentric Utilization Ratio (EUR)")
+        st.markdown("<h3 style='font-size: 22px; font-weight: 700; color: #111; margin-top: 30px; margin-bottom: 15px;'>1. Eccentric Utilization Ratio (EUR)</h3>", unsafe_allow_html=True)
         with st.expander("ℹ️ EUR 지표란?"):
             st.markdown("""
             **신장 단축 주기 효율성 (EUR)** = CMJ / Squat Jump
@@ -1134,7 +1295,7 @@ elif st.session_state['gw_view_mode'] == 'Insight Analysis':
 
         st.divider()
 
-        st.markdown("### 2. 불균형 요주의 리스트 (Limb Asymmetry Watchlist)")
+        st.markdown("<h3 style='font-size: 22px; font-weight: 700; color: #111; margin-top: 30px; margin-bottom: 15px;'>2. 불균형 요주의 리스트 (Limb Asymmetry Watchlist)</h3>", unsafe_allow_html=True)
         
         # Asymmetry Metric Selector
         asy_metric = st.selectbox("비대칭 분석 지표 선택", 
@@ -1226,7 +1387,7 @@ elif st.session_state['gw_view_mode'] == 'Insight Analysis':
         # Removed columns to make Groin Risk full width
         
         # with c3:
-        st.markdown("### 3. Groin Risk (Add/Abd Ratio)")
+        st.markdown("<h3 style='font-size: 22px; font-weight: 700; color: #111; margin-top: 30px; margin-bottom: 15px;'>3. Groin Risk (Add/Abd Ratio)</h3>", unsafe_allow_html=True)
         with st.expander("ℹ️ 서혜부(Groin) 건강"):
             st.markdown("""
             **내전근 / 외전근 비율 (Add / Abd Ratio)**:

@@ -40,5 +40,16 @@ def generate_toml():
                 else:
                     print(f'{k} = "{v}"')
 
+    # 4. Yongin FC
+    if os.path.exists("yongin_fc/yongin-key.json"):
+        with open("yongin_fc/yongin-key.json", "r") as f:
+            key_content = json.load(f)
+            print("\n[yongin_service_account]")
+            for k, v in key_content.items():
+                if k == "private_key":
+                    print(f'{k} = """{v}"""')
+                else:
+                    print(f'{k} = "{v}"')
+
 if __name__ == "__main__":
     generate_toml()

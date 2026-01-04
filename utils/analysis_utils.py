@@ -380,7 +380,8 @@ def calculate_physical_tier(df, metrics_dict):
     """
     if df.empty: return pd.DataFrame()
     
-    score_df = df.copy()
+    # Filter for Latest Record per Player within the selected range
+    score_df = df.sort_values('Test_Date').groupby('Name').tail(1).copy()
     valid_metrics = []
     
     # Calculate Z-score/Rank for each category
