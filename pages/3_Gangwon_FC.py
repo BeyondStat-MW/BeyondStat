@@ -420,7 +420,7 @@ elif st.session_state['gw_view_mode'] == 'Player Dashboard':
                     rows_html += f"<div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 13px;'><span style='color: #666; font-weight: 500; flex: 0 1 auto;'>{label}</span><span style='font-weight: 700; color: #333; flex: 1 0 auto; text-align: right; white-space: nowrap;'>{val_html}</span></div>"
                 
                 # Single line strings to avoid markdown code block indentation issues
-                card_style = "background-color: white; border-radius: 12px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #f0f0f0; height: 100%; min-height: 260px; display: flex; flex-direction: column; justify-content: space-between;"
+                card_style = "background-color: white; border-radius: 12px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #f0f0f0; height: 100%; min-height: 305px; display: flex; flex-direction: column; justify-content: space-between;"
                 title_style = "font-size: 15px; font-weight: 800; color: #111; border-bottom: 2px solid #006442; padding-bottom: 8px; margin-bottom: 15px; letter-spacing: -0.3px;"
                 badge_style = f"display: inline-block; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; color: white; background-color: {status_color}; box-shadow: 0 2px 4px rgba(0,0,0,0.08);"
                 
@@ -436,11 +436,18 @@ elif st.session_state['gw_view_mode'] == 'Player Dashboard':
 
             # --- 🔎 Player Deep Dive Check (Latest Status) ---
             # Helper for Badge Style Delta
-            def format_delta_html(current_val, prev_val, unit="", inverse=False, decimal=1):
+            def format_delta_html(current_val, prev_val, unit="", inverse=False, decimal=1, suffix_lr=False):
                 if pd.isna(current_val): return "N/A"
                 
+                # Suffix Logic (Left/Right)
+                display_val = current_val
+                lr_str = ""
+                if suffix_lr:
+                    lr_str = "L " if current_val < 0 else "R "
+                    display_val = abs(current_val)
+                
                 # Formatted current value
-                val_str = f"{current_val:.{decimal}f} <small style='color:#888'>{unit}</small>"
+                val_str = f"{lr_str}{display_val:.{decimal}f}% <small style='color:#888'>{unit}</small>" if suffix_lr else f"{current_val:.{decimal}f} <small style='color:#888'>{unit}</small>"
                 
                 # Check for missing previous data
                 if pd.isna(prev_val) or prev_val == 0:
@@ -533,7 +540,7 @@ elif st.session_state['gw_view_mode'] == 'Player Dashboard':
                     if s_val > 0:
                         eur_val = c_val / s_val
                         if eur_val > 1.15: eur_status, eur_color = "Excellent (탄력 우수)", "#006442" # Green
-                        elif eur_val >= 1.0: eur_status, eur_color = "Normal (정상)", "#1f77b4" # Blue
+                        elif eur_val > 1.0: eur_status, eur_color = "Normal (정상)", "#1f77b4" # Blue
                         else: eur_status, eur_color = "Low (탄력 저하)", "#d62728" # Red
                     
                     if s_prev > 0:
@@ -649,6 +656,12 @@ elif st.session_state['gw_view_mode'] == 'Player Dashboard':
                     iso_avg_prev = (iso_l_prev + iso_r_prev) / 2
                     ham_ratio_prev = ecc_avg_prev / iso_avg_prev if iso_avg_prev > 0 else 0
 
+                    max_iso_prev = max(iso_l_prev, iso_r_prev)
+                    iso_asym_prev = ((iso_r_prev - iso_l_prev) / max_iso_prev * 100) if max_iso_prev > 0 else 0
+
+                    max_ham_prev = max(h_l_prev, h_r_prev)
+                    ham_asym_prev = ((h_r_prev - h_l_prev) / max_ham_prev * 100) if max_ham_prev > 0 else 0
+
                     # Ratio Status
                     if ham_ratio < 1.1: h_r_stat, h_r_col = "Ecc Deficit", "#d62728"
                     elif ham_ratio > 1.15: h_r_stat, h_r_col = "Iso Deficit", "#F37021"
@@ -656,7 +669,9 @@ elif st.session_state['gw_view_mode'] == 'Player Dashboard':
                     
                     metrics_3 = [
                         ("Eccentric (L/R)", f"<div style='display:flex; justify-content:flex-end; white-space:nowrap;'>{format_delta_html(h_l, h_l_prev, 'N')} <span style='margin:0 5px; color:#ccc'>/</span> {format_delta_html(h_r, h_r_prev, 'N')}</div>"),
+                        ("Ecc. Imbalance", format_delta_html(ham_asym, ham_asym_prev, "%", inverse=True, suffix_lr=True)),
                         ("Isometric (L/R)", f"<div style='display:flex; justify-content:flex-end; white-space:nowrap;'>{format_delta_html(iso_l, iso_l_prev, 'N')} <span style='margin:0 5px; color:#ccc'>/</span> {format_delta_html(iso_r, iso_r_prev, 'N')}</div>"),
+                        ("Iso. Imbalance", format_delta_html(iso_asym, iso_asym_prev, "%", inverse=True, suffix_lr=True)),
                         ("Ecc/Iso Ratio", format_delta_html(ham_ratio, ham_ratio_prev, "ratio", decimal=2)) 
                     ]
                     st.markdown(create_detail_card("🦵 Hamstring Profile", metrics_3, h_r_stat, h_r_col), unsafe_allow_html=True)
@@ -675,9 +690,16 @@ elif st.session_state['gw_view_mode'] == 'Player Dashboard':
                     ratio_l_prev = add_l_prev / abd_l_prev if abd_l_prev > 0 else 0
                     ratio_r_prev = add_r_prev / abd_r_prev if abd_r_prev > 0 else 0
                     
+                    max_add_prev = max(add_l_prev, add_r_prev)
+                    add_asym_prev = ((add_r_prev - add_l_prev) / max_add_prev * 100) if max_add_prev > 0 else 0
+
+                    abd_asym_prev = ((abd_r_prev - abd_l_prev) / max(abd_l_prev, abd_r_prev) * 100) if max(abd_l_prev, abd_r_prev) > 0 else 0
+
                     metrics_4 = [
                         ("Adduction (L/R)", f"<div style='display:flex; justify-content:flex-end; white-space:nowrap;'>{format_delta_html(add_l, add_l_prev, 'N')} <span style='margin:0 5px; color:#ccc'>/</span> {format_delta_html(add_r, add_r_prev, 'N')}</div>"),
+                        ("Add. Imbalance", format_delta_html(add_asym, add_asym_prev, "", inverse=True, suffix_lr=True)),
                         ("Abduction (L/R)", f"<div style='display:flex; justify-content:flex-end; white-space:nowrap;'>{format_delta_html(abd_l, abd_l_prev, 'N')} <span style='margin:0 5px; color:#ccc'>/</span> {format_delta_html(abd_r, abd_r_prev, 'N')}</div>"),
+                        ("Abd. Imbalance", format_delta_html(abd_asym, abd_asym_prev, "", inverse=True, suffix_lr=True)),
                         ("Add/Abd Ratio", f"<div style='display:flex; justify-content:flex-end; white-space:nowrap;'>{format_delta_html(ratio_l, ratio_l_prev, 'ratio', decimal=2)} <span style='margin:0 5px; color:#ccc'>/</span> {format_delta_html(ratio_r, ratio_r_prev, 'ratio', decimal=2)}</div>")
                     ]
                     st.markdown(create_detail_card("🛡️ Groin Profile", metrics_4, groin_status, groin_color), unsafe_allow_html=True)
