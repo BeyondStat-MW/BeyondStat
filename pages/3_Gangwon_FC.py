@@ -629,7 +629,7 @@ elif st.session_state['gw_view_mode'] == 'Player Dashboard':
                     metrics_2 = [
                         ("Left Height", format_delta_html(l_val, l_prev, "cm")),
                         ("Right Height", format_delta_html(r_val, r_prev, "cm")),
-                        ("Asymmetry", format_delta_html(slj_asym, slj_asym_prev, "%", inverse=True)) 
+                        ("Asymmetry", format_delta_html(slj_asym, slj_asym_prev, "%", inverse=True, suffix_lr=True)) 
                     ]
                     st.markdown(create_detail_card("⚖️ Single Leg Jump", metrics_2, slj_status, slj_color), unsafe_allow_html=True)
                 
