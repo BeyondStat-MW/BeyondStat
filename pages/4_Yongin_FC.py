@@ -344,8 +344,8 @@ elif st.session_state['yf_view_mode'] == 'Player Dashboard':
         # Fetch player's data to determine date range
         df = data_loader.load_player_data(selected)
         if not df.empty:
-            p_start = df['Test_Date'].min().date()
-            p_end = df['Test_Date'].max().date()
+            p_start = df['Test_Date'].min()
+            p_end = df['Test_Date'].max()
             st.session_state['yf_start_date'] = p_start
             st.session_state['yf_end_date'] = p_end
             # Force update pickers via state keys (Streamlit handles this if keys match)
