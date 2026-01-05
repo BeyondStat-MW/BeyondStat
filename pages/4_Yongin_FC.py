@@ -977,7 +977,7 @@ elif st.session_state['yf_view_mode'] == 'Insight Analysis':
             
             # 2. Category Leaders
             st.markdown("##### 🥈 부문별 리더 (Category Leaders)")
-            cat1, cat2, cat3 = st.columns(3)
+            cat1, cat2 = st.columns(2)
             
             with cat1:
                  st.markdown("**⚡ Power Rank**")
@@ -990,10 +990,6 @@ elif st.session_state['yf_view_mode'] == 'Insight Analysis':
                  if 'Strength_Score' in tier_df.columns:
                      top5_str = tier_df.sort_values('Strength_Score', ascending=False).head(5)
                      st.dataframe(top5_str[['Name', 'Strength_Score']].style.format({'Strength_Score': '{:.1f}'}), hide_index=True, use_container_width=True)
-
-            with cat3:
-                 st.markdown("**⚖️ Balance Rank (Disabled)**")
-                 st.info("SLJ data removed.")
 
             st.markdown("---")
             with st.expander("📋 View Full Tier List"):
