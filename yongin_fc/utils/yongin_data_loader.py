@@ -149,7 +149,9 @@ def get_full_team_data():
                     'HipAdd_L', 'HipAdd_R',
                     'HipAbd_L', 'HipAbd_R',
                     'HopTest_MeanRSI', 
-                    'HipFlexion_Kicker_L', 'HipFlexion_Kicker_R'
+                    'HipFlexion_Kicker_L', 'HipFlexion_Kicker_R',
+                    'CMJ_ConcentricImpulseP1', 'CMJ_ConcentricImpulseP2', 'CMJ_PeakLandingForce',
+                    'ShoulderIR_L', 'ShoulderIR_R', 'ShoulderER_L', 'ShoulderER_R'
                 ]
                 
                 for col in numeric_candidates:
@@ -194,7 +196,10 @@ def load_player_data(player_name):
                     'HipAdd_L', 'HipAdd_R', 'HipAdd_Imbalance',
                     'HipAbd_L', 'HipAbd_R',
                     'HopTest_MeanRSI',
-                    'HipFlexion_Kicker_L', 'HipFlexion_Kicker_R', 'HipFlexion_Kicker_Imbalance'
+                    'HipFlexion_Kicker_L', 'HipFlexion_Kicker_R', 'HipFlexion_Kicker_Imbalance',
+                    'CMJ_ConcentricImpulseP1', 'CMJ_ConcentricImpulseP2', 'CMJ_PeakLandingForce',
+                    'ShoulderIR_L', 'ShoulderIR_R', 'ShoulderIR_Imbalance',
+                    'ShoulderER_L', 'ShoulderER_R', 'ShoulderER_Imbalance'
                 ]
                 for col in numeric_candidates:
                     if col in df.columns:
