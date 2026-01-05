@@ -57,27 +57,24 @@ def get_db_client():
     ]
     
     # 1. Try Secrets (Cloud Deployment)
-    # Check for standard 'gcp_service_account' or custom 'gangwon_service_account'
-    if "gcp_service_account" in st.secrets:
+    # Prioritize 'gangwon_service_account' then 'gcp_service_account'
+    if "gangwon_service_account" in st.secrets:
         try:
-            # Create credentials from the secrets dictionary
-            # st.secrets returns a AttrDict, we might need to convert to dict
-            key_info = dict(st.secrets["gcp_service_account"])
-            credentials = service_account.Credentials.from_service_account_info(
-                key_info, scopes=scopes
-            )
-            # print("Loaded credentials from Streamlit Secrets (gcp_service_account)")
-        except Exception as e:
-            print(f"Failed to load secrets: {e}")
-
-    elif "gangwon_service_account" in st.secrets:
-         try:
             key_info = dict(st.secrets["gangwon_service_account"])
             credentials = service_account.Credentials.from_service_account_info(
                 key_info, scopes=scopes
             )
-         except Exception as e:
-                st.error(f"Gangwon Secret Load Error: {e}")
+        except Exception as e:
+            st.error(f"Gangwon Secret Load Error ([gangwon_service_account]): {e}")
+
+    elif "gcp_service_account" in st.secrets:
+        try:
+            key_info = dict(st.secrets["gcp_service_account"])
+            credentials = service_account.Credentials.from_service_account_info(
+                key_info, scopes=scopes
+            )
+        except Exception as e:
+            st.error(f"Gangwon Secret Load Error ([gcp_service_account]): {e}")
             
     # 2. Try File (Local Development)
     if not credentials:
