@@ -412,6 +412,24 @@ elif st.session_state['yf_view_mode'] == 'Player Dashboard':
             col_cmj = 'CMJ_Height_Imp_mom_' if 'CMJ_Height_Imp_mom_' in df_p.columns else 'CMJ_Height_Imp_mom'
             col_sj  = 'SquatJ_Height_Imp_mom_' if 'SquatJ_Height_Imp_mom_' in df_p.columns else 'SquatJ_Height_Imp_mom'
 
+            # Helper for directional metrics (e.g., "8.3R", "5.2L")
+            def parse_directional_metric(val):
+                if pd.isna(val): return 0
+                if isinstance(val, (int, float)): return val
+                val_str = str(val).strip().upper()
+                if not val_str: return 0
+                
+                # Extract numeric part
+                match = re.search(r"([-+]?\d*\.?\d+)", val_str)
+                if not match: return 0
+                num = float(match.group(1))
+                
+                if "L" in val_str:
+                    return -abs(num)
+                elif "R" in val_str:
+                    return abs(num)
+                return num
+
             # --- 🔎 Player Deep Dive Check (Latest Status) ---
             # Helper for Badge Style Delta
             def format_delta_html(current_val, prev_val, unit="", inverse=False, decimal=1, suffix_lr=False):
@@ -650,22 +668,31 @@ elif st.session_state['yf_view_mode'] == 'Player Dashboard':
                     # New Metrics: CMJ P1, P2, Landing, HopTest
                     rsi_val = df_latest['CMJ_RSI_mod_Imp_mom_'].fillna(0).iloc[0] if 'CMJ_RSI_mod_Imp_mom_' in df_latest.columns else 0
                     rsi_prev = df_prev['CMJ_RSI_mod_Imp_mom_'].fillna(0).iloc[0] if not df_prev.empty and 'CMJ_RSI_mod_Imp_mom_' in df_prev.columns else 0
+                    
+                    # CMJ P1/P2 might be strings like "8.3R"
+                    p1_val_raw = df_latest['CMJ_ConcentricImpulseP1'].iloc[0] if 'CMJ_ConcentricImpulseP1' in df_latest.columns else 0
+                    p2_val_raw = df_latest['CMJ_ConcentricImpulseP2'].iloc[0] if 'CMJ_ConcentricImpulseP2' in df_latest.columns else 0
+                    
+                    p1_val = parse_directional_metric(p1_val_raw)
+                    p2_val = parse_directional_metric(p2_val_raw)
+                    
+                    p1_prev_raw = df_prev['CMJ_ConcentricImpulseP1'].iloc[0] if not df_prev.empty and 'CMJ_ConcentricImpulseP1' in df_prev.columns else 0
+                    p2_prev_raw = df_prev['CMJ_ConcentricImpulseP2'].iloc[0] if not df_prev.empty and 'CMJ_ConcentricImpulseP2' in df_prev.columns else 0
+                    
+                    p1_prev = parse_directional_metric(p1_prev_raw)
+                    p2_prev = parse_directional_metric(p2_prev_raw)
 
-                    p1_val = df_latest['CMJ_ConcentricImpulseP1'].fillna(0).iloc[0] if 'CMJ_ConcentricImpulseP1' in df_latest.columns else 0
-                    p2_val = df_latest['CMJ_ConcentricImpulseP2'].fillna(0).iloc[0] if 'CMJ_ConcentricImpulseP2' in df_latest.columns else 0
                     land_val = df_latest['CMJ_PeakLandingForce'].fillna(0).iloc[0] if 'CMJ_PeakLandingForce' in df_latest.columns else 0
                     hop_rsi = df_latest['HopTest_MeanRSI'].fillna(0).iloc[0] if 'HopTest_MeanRSI' in df_latest.columns else 0
                     
                     # Prev
-                    p1_prev = df_prev['CMJ_ConcentricImpulseP1'].fillna(0).iloc[0] if not df_prev.empty and 'CMJ_ConcentricImpulseP1' in df_prev.columns else 0
-                    p2_prev = df_prev['CMJ_ConcentricImpulseP2'].fillna(0).iloc[0] if not df_prev.empty and 'CMJ_ConcentricImpulseP2' in df_prev.columns else 0
                     land_prev = df_prev['CMJ_PeakLandingForce'].fillna(0).iloc[0] if not df_prev.empty and 'CMJ_PeakLandingForce' in df_prev.columns else 0
                     hop_prev = df_prev['HopTest_MeanRSI'].fillna(0).iloc[0] if not df_prev.empty and 'HopTest_MeanRSI' in df_prev.columns else 0
 
                     metrics_jump_detail = [
-                        ("CMJ RSI-mod", format_delta_html(rsi_val, rsi_prev, "index")),
-                        ("CMJ P1 %", format_delta_html(p1_val, p1_prev, "%")),
-                        ("CMJ P2 %", format_delta_html(p2_val, p2_prev, "%")),
+                        ("CMJ RSI-mod", format_delta_html(rsi_val, rsi_prev, "index", decimal=2)),
+                        ("CMJ P1 %", format_delta_html(p1_val, p1_prev, "", suffix_lr=True)),
+                        ("CMJ P2 %", format_delta_html(p2_val, p2_prev, "", suffix_lr=True)),
                         ("CMJ Landing Force", format_delta_html(land_val, land_prev, "N")),
                         ("Hop Test Mean RSI", format_delta_html(hop_rsi, hop_prev, ""))
                     ]
@@ -687,7 +714,7 @@ elif st.session_state['yf_view_mode'] == 'Player Dashboard':
                     metrics_hf = [
                         ("Left Force", format_delta_html(hf_l, hf_l_prev, "N")),
                         ("Right Force", format_delta_html(hf_r, hf_r_prev, "N")),
-                        ("Imbalance", format_delta_html(hf_imb, hf_imb_prev, "%", inverse=True, suffix_lr=True))
+                        ("Imbalance", format_delta_html(hf_imb, hf_imb_prev, "", inverse=True, suffix_lr=True))
                     ]
                     st.markdown(create_detail_card("🦵 고관절 굴곡 (Hip Flexion)", metrics_hf, hf_status, hf_color), unsafe_allow_html=True)
 
@@ -717,9 +744,9 @@ elif st.session_state['yf_view_mode'] == 'Player Dashboard':
 
                     metrics_sh = [
                         ("IR (L/R)", f"<div style='display:flex; justify-content:flex-end; white-space:nowrap;'>{format_delta_html(ir_l, ir_l_prev, 'N')} <span style='margin:0 5px; color:#ccc'>/</span> {format_delta_html(ir_r, ir_r_prev, 'N')}</div>"),
-                        ("IR Imbalance", format_delta_html(ir_imb, 0, "%", inverse=True, suffix_lr=True)),
+                        ("IR Imbalance", format_delta_html(ir_imb, 0, "", inverse=True, suffix_lr=True)),
                         ("ER (L/R)", f"<div style='display:flex; justify-content:flex-end; white-space:nowrap;'>{format_delta_html(er_l, er_l_prev, 'N')} <span style='margin:0 5px; color:#ccc'>/</span> {format_delta_html(er_r, er_r_prev, 'N')}</div>"),
-                        ("ER Imbalance", format_delta_html(er_imb, 0, "%", inverse=True, suffix_lr=True))
+                        ("ER Imbalance", format_delta_html(er_imb, 0, "", inverse=True, suffix_lr=True))
                     ]
                     st.markdown(create_detail_card("💪 어깨 근력 (Shoulder Profile)", metrics_sh, sh_status, sh_color), unsafe_allow_html=True)
             
