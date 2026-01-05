@@ -60,9 +60,14 @@ def get_db_client():
     # Check for standard 'gcp_service_account' or custom 'yongin_service_account'
     if "gcp_service_account" in st.secrets:
         try:
-            # Create credentials from the secrets dictionary
-            # st.secrets returns a AttrDict, we might need to convert to dict
             key_info = dict(st.secrets["gcp_service_account"])
+            # Robust sanitization for copy-paste errors
+            if "private_key" in key_info:
+                pk = key_info["private_key"]
+                pk = pk.replace("\\n", "\n")
+                lines = [line.strip() for line in pk.strip().split("\n")]
+                key_info["private_key"] = "\n".join(lines)
+                
             credentials = service_account.Credentials.from_service_account_info(
                 key_info, scopes=scopes
             )
@@ -73,6 +78,13 @@ def get_db_client():
     elif "yongin_service_account" in st.secrets:
          try:
             key_info = dict(st.secrets["yongin_service_account"])
+            # Robust sanitization for copy-paste errors
+            if "private_key" in key_info:
+                pk = key_info["private_key"]
+                pk = pk.replace("\\n", "\n")
+                lines = [line.strip() for line in pk.strip().split("\n")]
+                key_info["private_key"] = "\n".join(lines)
+
             credentials = service_account.Credentials.from_service_account_info(
                 key_info, scopes=scopes
             )
@@ -161,8 +173,8 @@ def get_full_team_data():
                 return df
                 
         except Exception as e:
-            print(f"Team Data Query Failed: {e}")
-            pass
+            st.error(f"Team Data Query Failed: {e}")
+            return pd.DataFrame()
             
     return pd.DataFrame()
 

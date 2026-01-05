@@ -61,6 +61,14 @@ def get_db_client():
     if "gangwon_service_account" in st.secrets:
         try:
             key_info = dict(st.secrets["gangwon_service_account"])
+            # Robust sanitization for copy-paste errors
+            if "private_key" in key_info:
+                pk = key_info["private_key"]
+                # Replace literal \n and strip whitespace from each line
+                pk = pk.replace("\\n", "\n")
+                lines = [line.strip() for line in pk.strip().split("\n")]
+                key_info["private_key"] = "\n".join(lines)
+                
             credentials = service_account.Credentials.from_service_account_info(
                 key_info, scopes=scopes
             )
@@ -70,6 +78,13 @@ def get_db_client():
     elif "gcp_service_account" in st.secrets:
         try:
             key_info = dict(st.secrets["gcp_service_account"])
+            # Robust sanitization for copy-paste errors
+            if "private_key" in key_info:
+                pk = key_info["private_key"]
+                pk = pk.replace("\\n", "\n")
+                lines = [line.strip() for line in pk.strip().split("\n")]
+                key_info["private_key"] = "\n".join(lines)
+
             credentials = service_account.Credentials.from_service_account_info(
                 key_info, scopes=scopes
             )
@@ -158,6 +173,9 @@ def get_full_team_data():
         except Exception as e:
             st.error(f"Team Data Query Failed: {e}")
             return pd.DataFrame()
+            
+    else:
+        st.error("Gangwon DB Client Initialization Failed. Please check Secrets configuration.")
             
     return pd.DataFrame()
 
