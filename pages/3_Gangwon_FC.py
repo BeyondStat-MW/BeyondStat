@@ -548,6 +548,9 @@ elif st.session_state['gw_view_mode'] == 'Player Dashboard':
 
                 # 2. SLJ Asymmetry (Updated to use Direct Column)
                 col_slj_asym = 'SLJ_Height_Asymmetry_Imp_mom_'
+                col_slj_l = 'SLJ_Height_L_Imp_mom_'
+                col_slj_r = 'SLJ_Height_R_Imp_mom_'
+                
                 slj_asym = 0
                 slj_status = "Balanced"
                 slj_color = "#006442"
