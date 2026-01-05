@@ -60,6 +60,7 @@ import plotly.graph_objects as go
 from gangwon_fc.utils import gangwon_data_loader as data_loader
 from utils import analysis_utils
 import importlib
+import re
 try:
     importlib.reload(data_loader)
 except:
@@ -409,19 +410,7 @@ elif st.session_state['gw_view_mode'] == 'Player Dashboard':
             else:
                 df_p = calculate_derived_cols(df_p)
                 
-                # --- DEBUG: SLJ COLUMN DUMP ---
-                # Search for any columns related to SLJ or Asymmetry
-                cand_cols = [c for c in df_p.columns if 'SLJ' in c or 'Asym' in c or 'mom' in c]
-                with st.expander("🛠️ DEBUG: SLJ / Asymmetry Columns Check", expanded=True):
-                    st.write("Available Columns:", cand_cols)
-                    if not df_p.empty:
-                        st.dataframe(df_p[cand_cols].head(1))
-                        # Check specific target types
-                        target = "SLJ_Height_Asymmetry_Imp_mom_"
-                        if target in df_p.columns:
-                            st.write(f"Target '{target}' raw value:", df_p[target].iloc[0])
-                            st.write(f"Type:", type(df_p[target].iloc[0]))
-                # ------------------------------
+
             
             # --- Helper Function for Premium UI Cards ---
             def create_detail_card(title, metrics, status_label, status_color):
@@ -577,8 +566,17 @@ elif st.session_state['gw_view_mode'] == 'Player Dashboard':
                 
                 # Use Direct Asymmetry Column
                 if col_slj_asym in df_latest.columns:
-                    # Coerce to numeric in case it's loaded as string
-                    slj_asym = pd.to_numeric(df_latest[col_slj_asym], errors='coerce').fillna(0).iloc[0]
+                    raw_val = df_latest[col_slj_asym].fillna(0).iloc[0]
+                    # Handle string format like "2.7 R" or "5.5 L"
+                    if isinstance(raw_val, str):
+                        match = re.search(r"([-+]?\d*\.?\d+)", raw_val)
+                        if match:
+                            slj_asym = float(match.group(1))
+                        else:
+                            slj_asym = 0
+                    else:
+                        # Already numeric
+                        slj_asym = float(raw_val) if raw_val else 0
                 else:
                     # Fallback
                     max_slj = max(l_val, r_val)
