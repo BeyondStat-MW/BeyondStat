@@ -942,11 +942,14 @@ elif st.session_state['yf_view_mode'] == 'Insight Analysis':
         tier_metrics = {
             'Power': [
                 'CMJ_Height_Imp_mom_' if 'CMJ_Height_Imp_mom_' in df_insight.columns else 'CMJ_Height_Imp_mom',
-                'SquatJ_Height_Imp_mom_' if 'SquatJ_Height_Imp_mom_' in df_insight.columns else 'SquatJ_Height_Imp_mom'
+                'SquatJ_Height_Imp_mom_' if 'SquatJ_Height_Imp_mom_' in df_insight.columns else 'SquatJ_Height_Imp_mom',
+                'CMJ_ConcentricImpulseP1', 'CMJ_ConcentricImpulseP2', 'CMJ_PeakLandingForce', 'HopTest_MeanRSI'
             ],
             'Strength': [
                 'Hamstring_Ecc_L', 'Hamstring_Ecc_R', 'Hamstring_ISO_L', 'Hamstring_ISO_R',
-                'HipAdd_L', 'HipAdd_R', 'HipAbd_L', 'HipAbd_R'
+                'HipAdd_L', 'HipAdd_R', 'HipAbd_L', 'HipAbd_R',
+                'HipFlexion_Kicker_L', 'HipFlexion_Kicker_R',
+                'ShoulderIR_L', 'ShoulderIR_R', 'ShoulderER_L', 'ShoulderER_R'
             ]
         }
         
@@ -965,7 +968,7 @@ elif st.session_state['yf_view_mode'] == 'Insight Analysis':
                 
                 st.markdown("""
                 <div style='background-color: #f8f9fa; padding: 10px; border-radius: 5px; margin-top: 10px; font-size: 12px; color: #555;'>
-                    <i><b>Physical Tier Score</b> = (Power Rank + Strength Rank + Balance Rank) / 3</i>
+                    <i><b>Physical Tier Score</b> = (Power Rank + Strength Rank) / 2</i>
                 </div>
                 """, unsafe_allow_html=True)
 
@@ -1072,7 +1075,8 @@ elif st.session_state['yf_view_mode'] == 'Insight Analysis':
         st.divider()
         st.markdown("<h3 style='font-size: 20px; font-weight: 700; color: #111; margin-top: 30px; margin-bottom: 10px;'>2. 불균형 요주의 리스트 (Limb Asymmetry Watchlist)</h3>", unsafe_allow_html=True)
         asy_metric = st.selectbox("비대칭 분석 지표 선택", 
-                                  ["Hamstring Eccentric", "Hamstring Isometric", "Hip Adduction", "Hip Abduction"])
+                                  ["Hamstring Eccentric", "Hamstring Isometric", "Hip Adduction", "Hip Abduction", 
+                                   "Hip Flexion Kicker", "Shoulder IR", "Shoulder ER"])
         
         if asy_metric == "Hamstring Eccentric":
             col_l, col_r, ref_threshold = 'Hamstring_Ecc_L', 'Hamstring_Ecc_R', 15
@@ -1082,6 +1086,12 @@ elif st.session_state['yf_view_mode'] == 'Insight Analysis':
             col_l, col_r, ref_threshold = 'HipAdd_L', 'HipAdd_R', 15
         elif asy_metric == "Hip Abduction":
             col_l, col_r, ref_threshold = 'HipAbd_L', 'HipAbd_R', 15
+        elif asy_metric == "Hip Flexion Kicker":
+            col_l, col_r, ref_threshold = 'HipFlexion_Kicker_L', 'HipFlexion_Kicker_R', 15
+        elif asy_metric == "Shoulder IR":
+            col_l, col_r, ref_threshold = 'ShoulderIR_L', 'ShoulderIR_R', 15
+        elif asy_metric == "Shoulder ER":
+            col_l, col_r, ref_threshold = 'ShoulderER_L', 'ShoulderER_R', 15
 
         asy_df = analysis_utils.calculate_asymmetry(df_insight, col_l, col_r)
         if not asy_df.empty:
@@ -1119,5 +1129,25 @@ elif st.session_state['yf_view_mode'] == 'Insight Analysis':
         if 'Hamstring_ISO_L' in df_insight.columns:
             df_insight['H_ISO_Mean'] = df_insight[['Hamstring_ISO_L','Hamstring_ISO_R']].mean(axis=1)
             df_insight['H_Ecc_Mean'] = df_insight[['Hamstring_Ecc_L','Hamstring_Ecc_R']].mean(axis=1)
-            fig_ham = analysis_utils.plot_hamstring_functional_ratio(df_insight, 'H_ISO_Mean', 'H_Ecc_Mean', title="Hamstring Profile")
-            st.plotly_chart(fig_ham, use_container_width=True)
+            
+            # Calculate Functional Ratio for Risk Summary
+            df_insight['Ham_Ratio'] = df_insight['H_Ecc_Mean'] / df_insight['H_ISO_Mean']
+            
+            c_chart, c_list = st.columns([2.5, 1])
+            with c_chart:
+                fig_ham = analysis_utils.plot_hamstring_functional_ratio(df_insight, 'H_ISO_Mean', 'H_Ecc_Mean', title="Hamstring Profile")
+                st.plotly_chart(fig_ham, use_container_width=True)
+            with c_list:
+                st.markdown("##### 📋 Risk Summary")
+                # Criteria from Player Card: < 1.1 (Ecc Deficit), > 1.15 (Iso Deficit)
+                for status_label in ['Ecc Deficit (< 1.1)', 'Iso Deficit (> 1.15)']:
+                    if 'Ecc' in status_label:
+                        subset = df_insight[df_insight['Ham_Ratio'] < 1.1]
+                        color = 'red'
+                    else:
+                        subset = df_insight[df_insight['Ham_Ratio'] > 1.15]
+                        color = 'orange'
+                        
+                    if not subset.empty:
+                        st.markdown(f":{color}[**{status_label}**] ({len(subset)}명)")
+                        for _, row in subset.iterrows(): st.caption(f"**{row['Name']}**: {row['Ham_Ratio']:.2f}")
