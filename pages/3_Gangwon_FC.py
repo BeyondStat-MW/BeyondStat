@@ -408,6 +408,20 @@ elif st.session_state['gw_view_mode'] == 'Player Dashboard':
                 st.warning(f"No data for {selected_player}.")
             else:
                 df_p = calculate_derived_cols(df_p)
+                
+                # --- DEBUG: SLJ COLUMN DUMP ---
+                # Search for any columns related to SLJ or Asymmetry
+                cand_cols = [c for c in df_p.columns if 'SLJ' in c or 'Asym' in c or 'mom' in c]
+                with st.expander("🛠️ DEBUG: SLJ / Asymmetry Columns Check", expanded=True):
+                    st.write("Available Columns:", cand_cols)
+                    if not df_p.empty:
+                        st.dataframe(df_p[cand_cols].head(1))
+                        # Check specific target types
+                        target = "SLJ_Height_Asymmetry_Imp_mom_"
+                        if target in df_p.columns:
+                            st.write(f"Target '{target}' raw value:", df_p[target].iloc[0])
+                            st.write(f"Type:", type(df_p[target].iloc[0]))
+                # ------------------------------
             
             # --- Helper Function for Premium UI Cards ---
             def create_detail_card(title, metrics, status_label, status_color):
