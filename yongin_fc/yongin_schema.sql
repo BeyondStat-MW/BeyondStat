@@ -1,9 +1,9 @@
 -- Yongin FC BigQuery Schema Setup
--- Project ID: yongfc_db
+-- Project ID: yonginfc
 -- Sheet URL: https://docs.google.com/spreadsheets/d/1M7K8SwfAulrto3G9p97a4ENfYerHIh6VFpALvj17mf0/edit
 
 -- 1. Nordbord
-CREATE OR REPLACE EXTERNAL TABLE `yongfc_db.vald_data.vald_nordbord`
+CREATE OR REPLACE EXTERNAL TABLE `yonginfc.vald_data.vald_nordbord`
 OPTIONS (
   format = 'GOOGLE_SHEETS',
   uris = ['https://docs.google.com/spreadsheets/d/1M7K8SwfAulrto3G9p97a4ENfYerHIh6VFpALvj17mf0/edit'],
@@ -13,7 +13,7 @@ OPTIONS (
 );
 
 -- 2. ForceFrame
-CREATE OR REPLACE EXTERNAL TABLE `yongfc_db.vald_data.vald_forceframe`
+CREATE OR REPLACE EXTERNAL TABLE `yonginfc.vald_data.vald_forceframe`
 OPTIONS (
   format = 'GOOGLE_SHEETS',
   uris = ['https://docs.google.com/spreadsheets/d/1M7K8SwfAulrto3G9p97a4ENfYerHIh6VFpALvj17mf0/edit'],
@@ -23,7 +23,7 @@ OPTIONS (
 );
 
 -- 3. CMJ
-CREATE OR REPLACE EXTERNAL TABLE `yongfc_db.vald_data.vald_cmj`
+CREATE OR REPLACE EXTERNAL TABLE `yonginfc.vald_data.vald_cmj`
 OPTIONS (
   format = 'GOOGLE_SHEETS',
   uris = ['https://docs.google.com/spreadsheets/d/1M7K8SwfAulrto3G9p97a4ENfYerHIh6VFpALvj17mf0/edit'],
@@ -33,7 +33,7 @@ OPTIONS (
 );
 
 -- 4. SJ
-CREATE OR REPLACE EXTERNAL TABLE `yongfc_db.vald_data.vald_sj`
+CREATE OR REPLACE EXTERNAL TABLE `yonginfc.vald_data.vald_sj`
 OPTIONS (
   format = 'GOOGLE_SHEETS',
   uris = ['https://docs.google.com/spreadsheets/d/1M7K8SwfAulrto3G9p97a4ENfYerHIh6VFpALvj17mf0/edit'],
@@ -43,7 +43,7 @@ OPTIONS (
 );
 
 -- 5. HopTest
-CREATE OR REPLACE EXTERNAL TABLE `yongfc_db.vald_data.vald_hoptest`
+CREATE OR REPLACE EXTERNAL TABLE `yonginfc.vald_data.vald_hoptest`
 OPTIONS (
   format = 'GOOGLE_SHEETS',
   uris = ['https://docs.google.com/spreadsheets/d/1M7K8SwfAulrto3G9p97a4ENfYerHIh6VFpALvj17mf0/edit'],
@@ -53,7 +53,7 @@ OPTIONS (
 );
 
 -- 6. All Data
-CREATE OR REPLACE EXTERNAL TABLE `yongfc_db.vald_data.vald_all_data`
+CREATE OR REPLACE EXTERNAL TABLE `yonginfc.vald_data.vald_all_data`
 OPTIONS (
   format = 'GOOGLE_SHEETS',
   uris = ['https://docs.google.com/spreadsheets/d/1M7K8SwfAulrto3G9p97a4ENfYerHIh6VFpALvj17mf0/edit'],

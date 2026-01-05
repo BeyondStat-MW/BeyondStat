@@ -11,7 +11,7 @@ import os
 # --- Configuration ---
 # Update this to the actual key file for Yongin FC
 SERVICE_ACCOUNT_FILE = "yongin-key.json" 
-PROJECT_ID = "yongfc_db"
+PROJECT_ID = "yonginfc"
 DATASET_ID = "vald_data"
 
 # --- Mock Data Generator (For Demo/Dev) ---
