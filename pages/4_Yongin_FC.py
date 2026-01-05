@@ -235,6 +235,11 @@ def calculate_derived_cols(df):
         df['HipAdd_Avg'] = df[['HipAdd_L', 'HipAdd_R']].mean(axis=1)
     if 'HipAbd_L' in df.columns and 'HipAbd_Avg' not in df.columns:
         df['HipAbd_Avg'] = df[['HipAbd_L', 'HipAbd_R']].mean(axis=1)
+
+    # Added Hip Flexion Kicker Average
+    if 'HipFlexion_Kicker_L' in df.columns and 'HipFlexion_Kicker_R' in df.columns and 'HipFlex_Avg' not in df.columns:
+        df['HipFlex_Avg'] = df[['HipFlexion_Kicker_L', 'HipFlexion_Kicker_R']].mean(axis=1)
+
     return df
 
 # --- VIEW: Team Dashboard ---
@@ -259,18 +264,19 @@ if st.session_state['yf_view_mode'] == 'Team Dashboard':
     col_cmj = 'CMJ_Height_Imp_mom_' if 'CMJ_Height_Imp_mom_' in df_team.columns else 'CMJ_Height_Imp_mom'
     col_sj  = 'SquatJ_Height_Imp_mom_' if 'SquatJ_Height_Imp_mom_' in df_team.columns else 'SquatJ_Height_Imp_mom'
     
-    # 1. 7 KPI Boxes
+    # 1. 8 KPI Boxes
     kpis = [
-        ("CMJ (Avg)", safe_mean(df_team, col_cmj)),
-        ("Squat Jump (Avg)", safe_mean(df_team, col_sj)),
-        ("Single Jump (Avg)", safe_mean(df_team, 'SLJ_Avg')),
-        ("Hamstring Ecc (Avg)", safe_mean(df_team, 'Hamstring_Ecc_Avg')),
-        ("Hamstring ISO (Avg)", safe_mean(df_team, 'Hamstring_ISO_Avg')),
-        ("Hip Add (Avg)", safe_mean(df_team, 'HipAdd_Avg')),
-        ("Hip Abd (Avg)", safe_mean(df_team, 'HipAbd_Avg')),
+        ("CMJ Height<br><span style='font-size:12px; color:#888'>(Avg)</span>", safe_mean(df_team, col_cmj)),
+        ("Squat Jump<br><span style='font-size:12px; color:#888'>(Avg)</span>", safe_mean(df_team, col_sj)),
+        ("HopTest RSI<br><span style='font-size:12px; color:#888'>(Avg)</span>", safe_mean(df_team, 'HopTest_MeanRSI')),
+        ("Hamstring Ecc<br><span style='font-size:12px; color:#888'>(Avg)</span>", safe_mean(df_team, 'Hamstring_Ecc_Avg')),
+        ("Hamstring ISO<br><span style='font-size:12px; color:#888'>(Avg)</span>", safe_mean(df_team, 'Hamstring_ISO_Avg')),
+        ("Hip Add<br><span style='font-size:12px; color:#888'>(Avg)</span>", safe_mean(df_team, 'HipAdd_Avg')),
+        ("Hip Abd<br><span style='font-size:12px; color:#888'>(Avg)</span>", safe_mean(df_team, 'HipAbd_Avg')),
+        ("Hip Flexion<br><span style='font-size:12px; color:#888'>(Avg)</span>", safe_mean(df_team, 'HipFlex_Avg'))
     ]
     
-    cols = st.columns(7)
+    cols = st.columns(8)
     for i, (label, val) in enumerate(kpis):
         with cols[i]:
             st.markdown(f"""
@@ -286,12 +292,13 @@ if st.session_state['yf_view_mode'] == 'Team Dashboard':
     
     # --- Power Metrics ---
     st.subheader("⚡ 파워 분석 (Power Metrics)")
-    metric_opt = st.selectbox("지표 선택 (Select Metric)", ["CMJ", "SquatJ", "SLJ"], key="team_pow")
+    metric_opt = st.selectbox("지표 선택 (Select Metric)", ["CMJ", "SquatJ", "SLJ", "HopTest RSI"], key="team_pow")
     
     col_map = {
         "CMJ": col_cmj, 
         "SquatJ": col_sj, 
-        "SLJ": "SLJ_Avg"
+        "SLJ": "SLJ_Avg",
+        "HopTest RSI": "HopTest_MeanRSI"
     }
     y_col = col_map[metric_opt]
     
@@ -313,9 +320,9 @@ if st.session_state['yf_view_mode'] == 'Team Dashboard':
 
     # --- Strength Metrics ---
     st.subheader("💪 근력 분석 (Strength Metrics)")
-    metric_opt_s = st.selectbox("지표 선택 (Select Metric)", ["Hamstring Ecc", "Hamstring ISO", "HipAdd", "HipAbd"], key="team_str")
+    metric_opt_s = st.selectbox("지표 선택 (Select Metric)", ["Hamstring Ecc", "Hamstring ISO", "HipAdd", "HipAbd", "Hip Flexion"], key="team_str")
     
-    col_map_s = {"Hamstring Ecc": "Hamstring_Ecc_Avg", "Hamstring ISO": "Hamstring_ISO_Avg", "HipAdd": "HipAdd_Avg", "HipAbd": "HipAbd_Avg"}
+    col_map_s = {"Hamstring Ecc": "Hamstring_Ecc_Avg", "Hamstring ISO": "Hamstring_ISO_Avg", "HipAdd": "HipAdd_Avg", "HipAbd": "HipAbd_Avg", "Hip Flexion": "HipFlex_Avg"}
     y_col_s = col_map_s[metric_opt_s]
     
     if y_col_s in df_team.columns:

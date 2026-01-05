@@ -146,7 +146,10 @@ def get_full_team_data():
                     'Hamstring_Ecc_L', 'Hamstring_Ecc_R',
                     'Hamstring_ISO_L', 'Hamstring_ISO_R',
                     'HipAdd_L', 'HipAdd_R',
-                    'HipAbd_L', 'HipAbd_R'
+                    'HipAdd_L', 'HipAdd_R',
+                    'HipAbd_L', 'HipAbd_R',
+                    'HopTest_MeanRSI', 
+                    'HipFlexion_Kicker_L', 'HipFlexion_Kicker_R'
                 ]
                 
                 for col in numeric_candidates:
@@ -188,7 +191,10 @@ def load_player_data(player_name):
                     'Hamstring_Ecc_L', 'Hamstring_Ecc_R', 'Hamstring_Ecc_Imbalance',
                     'Hamstring_ISO_L', 'Hamstring_ISO_R',
                     'HipAdd_L', 'HipAdd_R', 'HipAdd_Imbalance',
-                    'HipAbd_L', 'HipAbd_R'
+                    'HipAdd_L', 'HipAdd_R', 'HipAdd_Imbalance',
+                    'HipAbd_L', 'HipAbd_R',
+                    'HopTest_MeanRSI',
+                    'HipFlexion_Kicker_L', 'HipFlexion_Kicker_R', 'HipFlexion_Kicker_Imbalance'
                 ]
                 for col in numeric_candidates:
                     if col in df.columns:
