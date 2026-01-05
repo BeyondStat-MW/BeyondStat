@@ -943,6 +943,7 @@ elif st.session_state['yf_view_mode'] == 'Insight Analysis':
             'Power': [
                 'CMJ_Height_Imp_mom_' if 'CMJ_Height_Imp_mom_' in df_insight.columns else 'CMJ_Height_Imp_mom',
                 'SquatJ_Height_Imp_mom_' if 'SquatJ_Height_Imp_mom_' in df_insight.columns else 'SquatJ_Height_Imp_mom',
+                'CMJ_RSI_mod_Imp_mom_' if 'CMJ_RSI_mod_Imp_mom_' in df_insight.columns else 'CMJ_RSI_mod_Imp_mom',
                 'CMJ_ConcentricImpulseP1', 'CMJ_ConcentricImpulseP2', 'CMJ_PeakLandingForce', 'HopTest_MeanRSI'
             ],
             'Strength': [
