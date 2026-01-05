@@ -644,6 +644,9 @@ elif st.session_state['yf_view_mode'] == 'Player Dashboard':
                 # --- Row 2, Box 1: Other Jump Data ---
                 with r2_c1:
                     # New Metrics: CMJ P1, P2, Landing, HopTest
+                    rsi_val = df_latest['CMJ_RSI_mod_Imp_mom_'].fillna(0).iloc[0] if 'CMJ_RSI_mod_Imp_mom_' in df_latest.columns else 0
+                    rsi_prev = df_prev['CMJ_RSI_mod_Imp_mom_'].fillna(0).iloc[0] if not df_prev.empty and 'CMJ_RSI_mod_Imp_mom_' in df_prev.columns else 0
+
                     p1_val = df_latest['CMJ_ConcentricImpulseP1'].fillna(0).iloc[0] if 'CMJ_ConcentricImpulseP1' in df_latest.columns else 0
                     p2_val = df_latest['CMJ_ConcentricImpulseP2'].fillna(0).iloc[0] if 'CMJ_ConcentricImpulseP2' in df_latest.columns else 0
                     land_val = df_latest['CMJ_PeakLandingForce'].fillna(0).iloc[0] if 'CMJ_PeakLandingForce' in df_latest.columns else 0
