@@ -261,23 +261,23 @@ if st.session_state['yf_view_mode'] == 'Team Dashboard':
     
     # 1. 8 KPI Boxes
     kpis = [
-        ("CMJ Height<br><span style='font-size:12px; color:#888'>(Avg)</span>", safe_mean(df_team, col_cmj)),
-        ("Squat Jump<br><span style='font-size:12px; color:#888'>(Avg)</span>", safe_mean(df_team, col_sj)),
-        ("HopTest RSI<br><span style='font-size:12px; color:#888'>(Avg)</span>", safe_mean(df_team, 'HopTest_MeanRSI')),
-        ("Hamstring Ecc<br><span style='font-size:12px; color:#888'>(Avg)</span>", safe_mean(df_team, 'Hamstring_Ecc_Avg')),
-        ("Hamstring ISO<br><span style='font-size:12px; color:#888'>(Avg)</span>", safe_mean(df_team, 'Hamstring_ISO_Avg')),
-        ("Hip Add<br><span style='font-size:12px; color:#888'>(Avg)</span>", safe_mean(df_team, 'HipAdd_Avg')),
-        ("Hip Abd<br><span style='font-size:12px; color:#888'>(Avg)</span>", safe_mean(df_team, 'HipAbd_Avg')),
-        ("Hip Flexion<br><span style='font-size:12px; color:#888'>(Avg)</span>", safe_mean(df_team, 'HipFlex_Avg'))
+        ("CMJ Height<br><span style='font-size:12px; color:#888'>(Avg)</span>", safe_mean(df_team, col_cmj), "cm"),
+        ("Squat Jump<br><span style='font-size:12px; color:#888'>(Avg)</span>", safe_mean(df_team, col_sj), "cm"),
+        ("HopTest RSI<br><span style='font-size:12px; color:#888'>(Avg)</span>", safe_mean(df_team, 'HopTest_MeanRSI'), ""),
+        ("Hamstring Ecc<br><span style='font-size:12px; color:#888'>(Avg)</span>", safe_mean(df_team, 'Hamstring_Ecc_Avg'), "N"),
+        ("Hamstring ISO<br><span style='font-size:12px; color:#888'>(Avg)</span>", safe_mean(df_team, 'Hamstring_ISO_Avg'), "N"),
+        ("Hip Add<br><span style='font-size:12px; color:#888'>(Avg)</span>", safe_mean(df_team, 'HipAdd_Avg'), "N"),
+        ("Hip Abd<br><span style='font-size:12px; color:#888'>(Avg)</span>", safe_mean(df_team, 'HipAbd_Avg'), "N"),
+        ("Hip Flexion<br><span style='font-size:12px; color:#888'>(Avg)</span>", safe_mean(df_team, 'HipFlex_Avg'), "N")
     ]
     
     cols = st.columns(8)
-    for i, (label, val) in enumerate(kpis):
+    for i, (label, val, unit) in enumerate(kpis):
         with cols[i]:
             st.markdown(f"""
             <div class="kpi-card">
                 <div class="kpi-label" title="{label}">{label}</div>
-                <div class="kpi-value">{val:.1f}</div>
+                <div class="kpi-value">{val:.1f} <small style='font-size:12px; color:#888'>{unit}</small></div>
             </div>
             """, unsafe_allow_html=True)
             
@@ -510,9 +510,9 @@ elif st.session_state['yf_view_mode'] == 'Player Dashboard':
                     if max_slj > 0:
                         slj_asym = ((r_val - l_val) / max_slj) * 100
                         if abs(slj_asym) > 10: 
-                            slj_status, slj_color = f"Imbalance ({slj_asym:.1f}%)", "#d62728"
+                            slj_status, slj_color = f"불균형 (Imbalance: {slj_asym:.1f}%)", "#E6002D"
                         else:
-                            slj_status, slj_color = f"Normal ({slj_asym:.1f}%)", "#E6002D"
+                            slj_status, slj_color = f"정상 (Normal: {slj_asym:.1f}%)", "#00CCA3"
                             
                     l_prev = df_prev[col_slj_l].fillna(0).iloc[0] if not df_prev.empty and col_slj_l in df_prev.columns else 0
                     r_prev = df_prev[col_slj_r].fillna(0).iloc[0] if not df_prev.empty and col_slj_r in df_prev.columns else 0
@@ -532,9 +532,9 @@ elif st.session_state['yf_view_mode'] == 'Player Dashboard':
                 if max_ham > 0:
                     ham_asym = ((h_r - h_l) / max_ham) * 100
                     if abs(ham_asym) > 15:
-                        ham_status, ham_color = f"Risk ({ham_asym:.1f}%)", "#d62728"
+                        ham_status, ham_color = f"주의 (Risk: {ham_asym:.1f}%)", "#E6002D"
                     else:
-                        ham_status, ham_color = f"Stable ({ham_asym:.1f}%)", "#E6002D"
+                        ham_status, ham_color = f"안정 (Stable: {ham_asym:.1f}%)", "#00CCA3"
 
                 # 4. Groin Risk (Hip Add/Abd Ratio)
                 groin_status = "Good"
@@ -548,9 +548,11 @@ elif st.session_state['yf_view_mode'] == 'Player Dashboard':
                 ratio_r = add_r / abd_r if abd_r > 0 else 0
                 
                 if (ratio_l > 0 and ratio_l < 0.8) or (ratio_r > 0 and ratio_r < 0.8):
-                    groin_status, groin_color = "High Risk (<0.8)", "#d62728"
+                    groin_status, groin_color = "고위험 (High Risk)", "#E6002D"
+                elif (ratio_l >= 0.8 and ratio_l < 0.9) or (ratio_r >= 0.8 and ratio_r < 0.9):
+                    groin_status, groin_color = "관찰 필요 (Watch)", "#F37021"
                 else:
-                    groin_status, groin_color = "Stable (>0.8)", "#E6002D"
+                    groin_status, groin_color = "안정 (Stable)", "#00CCA3"
 
                 # Layout: Row 1 (3 Columns)
                 r1_c1, r1_c2, r1_c3 = st.columns(3)
@@ -595,9 +597,9 @@ elif st.session_state['yf_view_mode'] == 'Player Dashboard':
                     ham_asym_prev = ((h_r_prev - h_l_prev) / max_ham_prev * 100) if max_ham_prev > 0 else 0
 
                     # Ratio Status
-                    if ham_ratio < 1.1: h_r_stat, h_r_col = "Ecc Deficit", "#d62728"
-                    elif ham_ratio > 1.15: h_r_stat, h_r_col = "Iso Deficit", "#F37021"
-                    else: h_r_stat, h_r_col = "Optimal", "#00CCA3"
+                    if ham_ratio < 1.1: h_r_stat, h_r_col = "신장성 부족 (Ecc Deficit)", "#E6002D"
+                    elif ham_ratio > 1.15: h_r_stat, h_r_col = "등척성 부족 (Iso Deficit)", "#F37021"
+                    else: h_r_stat, h_r_col = "이상적 (Optimal)", "#00CCA3"
                     
                     metrics_3 = [
                         ("Eccentric (L/R)", f"<div style='display:flex; justify-content:flex-end; white-space:nowrap;'>{format_delta_html(h_l, h_l_prev, 'N')} <span style='margin:0 5px; color:#ccc'>/</span> {format_delta_html(h_r, h_r_prev, 'N')}</div>"),
@@ -665,7 +667,7 @@ elif st.session_state['yf_view_mode'] == 'Player Dashboard':
                         ("CMJ Landing Force", format_delta_html(land_val, land_prev, "N")),
                         ("Hop Test Mean RSI", format_delta_html(hop_rsi, hop_prev, ""))
                     ]
-                    st.markdown(create_detail_card("📊 Other Jump Data", metrics_jump_detail, "Info", "#999"), unsafe_allow_html=True)
+                    st.markdown(create_detail_card("📊 기타 점프 지표 (Jump Detail)", metrics_jump_detail, "Info", "#999"), unsafe_allow_html=True)
 
                 # --- Row 2, Box 2: Hip Flexion Kicker ---
                 with r2_c2:
@@ -677,15 +679,15 @@ elif st.session_state['yf_view_mode'] == 'Player Dashboard':
                     hf_r_prev = df_prev['HipFlexion_Kicker_R'].fillna(0).iloc[0] if not df_prev.empty and 'HipFlexion_Kicker_R' in df_prev.columns else 0
                     hf_imb_prev = df_prev['HipFlexion_Kicker_Imbalance'].fillna(0).iloc[0] if not df_prev.empty and 'HipFlexion_Kicker_Imbalance' in df_prev.columns else 0
                     
-                    hf_status = "Risk" if abs(hf_imb) > 15 else "Balanced"
-                    hf_color = "#d62728" if abs(hf_imb) > 15 else "#E6002D"
+                    hf_status = "주의 (Risk)" if abs(hf_imb) > 15 else "정상 (Normal)"
+                    hf_color = "#E6002D" if abs(hf_imb) > 15 else "#00CCA3"
 
                     metrics_hf = [
                         ("Left Force", format_delta_html(hf_l, hf_l_prev, "N")),
                         ("Right Force", format_delta_html(hf_r, hf_r_prev, "N")),
                         ("Imbalance", format_delta_html(hf_imb, hf_imb_prev, "%", inverse=True, suffix_lr=True))
                     ]
-                    st.markdown(create_detail_card("🦵 Hip Flexion Kicker", metrics_hf, hf_status, hf_color), unsafe_allow_html=True)
+                    st.markdown(create_detail_card("🦵 고관절 굴곡 (Hip Flexion)", metrics_hf, hf_status, hf_color), unsafe_allow_html=True)
 
                 # --- Row 2, Box 3: Shoulder Profile ---
                 with r2_c3:
@@ -705,8 +707,11 @@ elif st.session_state['yf_view_mode'] == 'Player Dashboard':
                     er_l_prev = df_prev['ShoulderER_L'].fillna(0).iloc[0] if not df_prev.empty and 'ShoulderER_L' in df_prev.columns else 0
                     er_r_prev = df_prev['ShoulderER_R'].fillna(0).iloc[0] if not df_prev.empty and 'ShoulderER_R' in df_prev.columns else 0
 
-                    sh_status = "Balanced"
-                    sh_color = "#E6002D"
+                    # Logic for Shoulder Status
+                    if abs(ir_imb) > 15 or abs(er_imb) > 15:
+                        sh_status, sh_color = "주의 (Risk)", "#E6002D"
+                    else:
+                        sh_status, sh_color = "정상 (Normal)", "#00CCA3"
 
                     metrics_sh = [
                         ("IR (L/R)", f"<div style='display:flex; justify-content:flex-end; white-space:nowrap;'>{format_delta_html(ir_l, ir_l_prev, 'N')} <span style='margin:0 5px; color:#ccc'>/</span> {format_delta_html(ir_r, ir_r_prev, 'N')}</div>"),
@@ -714,7 +719,7 @@ elif st.session_state['yf_view_mode'] == 'Player Dashboard':
                         ("ER (L/R)", f"<div style='display:flex; justify-content:flex-end; white-space:nowrap;'>{format_delta_html(er_l, er_l_prev, 'N')} <span style='margin:0 5px; color:#ccc'>/</span> {format_delta_html(er_r, er_r_prev, 'N')}</div>"),
                         ("ER Imbalance", format_delta_html(er_imb, 0, "%", inverse=True, suffix_lr=True))
                     ]
-                    st.markdown(create_detail_card("💪 Shoulder Profile", metrics_sh, sh_status, sh_color), unsafe_allow_html=True)
+                    st.markdown(create_detail_card("💪 어깨 근력 (Shoulder Profile)", metrics_sh, sh_status, sh_color), unsafe_allow_html=True)
             
             st.divider()
 
@@ -949,8 +954,7 @@ elif st.session_state['yf_view_mode'] == 'Insight Analysis':
             'Strength': [
                 'Hamstring_Ecc_L', 'Hamstring_Ecc_R', 'Hamstring_ISO_L', 'Hamstring_ISO_R',
                 'HipAdd_L', 'HipAdd_R', 'HipAbd_L', 'HipAbd_R',
-                'HipFlexion_Kicker_L', 'HipFlexion_Kicker_R',
-                'ShoulderIR_L', 'ShoulderIR_R', 'ShoulderER_L', 'ShoulderER_R'
+                'HipFlexion_Kicker_L', 'HipFlexion_Kicker_R'
             ]
         }
         
@@ -969,10 +973,12 @@ elif st.session_state['yf_view_mode'] == 'Insight Analysis':
                 
                 st.markdown("""
                 <div style='background-color: #f8f9fa; padding: 10px; border-radius: 5px; margin-top: 10px; font-size: 12px; color: #555;'>
-                    <i><b>Physical Tier Score</b> = (Power Rank + Strength Rank) / 2</i><br>
-                    <span style='color: #888; font-size: 11px;'>
-                    • <b>S Tier</b>: Score ≥ 80 &nbsp;|&nbsp; • <b>A Tier</b>: ≥ 60 &nbsp;|&nbsp; • <b>B Tier</b>: ≥ 40 &nbsp;|&nbsp; • <b>C Tier</b>: < 40
-                    </span>
+                    <i><b>피지컬 티어 점수 (Physical Tier Score)</b> = (파워 랭킹 + 근력 랭킹) / 2</i><br>
+                    <i>S (상위 20%), A (20-50%), B (50-80%), C (하위 20%)</i>
+                    <ul style='margin-top: 5px; padding-left: 20px;'>
+                        <li><b>파워 (Power)</b>: CMJ, Squat Jump, Hop Test</li>
+                        <li><b>근력 (Strength)</b>: 햄스트링(Ecc/ISO), 고관절(Add/Abd), 고관절 굴곡</li>
+                    </ul>
                 </div>
                 """, unsafe_allow_html=True)
 
@@ -983,13 +989,13 @@ elif st.session_state['yf_view_mode'] == 'Insight Analysis':
             cat1, cat2 = st.columns(2)
             
             with cat1:
-                 st.markdown("**⚡ Power Rank**")
+                 st.markdown("**⚡ 파워 랭킹 (Power Rank)**")
                  if 'Power_Score' in tier_df.columns:
                      top5_pow = tier_df.sort_values('Power_Score', ascending=False).head(5)
                      st.dataframe(top5_pow[['Name', 'Power_Score']].style.format({'Power_Score': '{:.1f}'}), hide_index=True, use_container_width=True)
             
             with cat2:
-                 st.markdown("**💪 Strength Rank**")
+                 st.markdown("**💪 근력 랭킹 (Strength Rank)**")
                  if 'Strength_Score' in tier_df.columns:
                      top5_str = tier_df.sort_values('Strength_Score', ascending=False).head(5)
                      st.dataframe(top5_str[['Name', 'Strength_Score']].style.format({'Strength_Score': '{:.1f}'}), hide_index=True, use_container_width=True)
@@ -1002,7 +1008,7 @@ elif st.session_state['yf_view_mode'] == 'Insight Analysis':
 
     # 2. Development Tracker
     elif an_mode == "전후 비교 (Development Tracker)":
-        st.markdown("<h3 style='font-size: 24px; font-weight: 700; color: #111; margin-top: 20px; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 10px;'>📈 Pre-Post Development Analysis</h3>", unsafe_allow_html=True)
+        st.markdown("<h3 style='font-size: 24px; font-weight: 700; color: #111; margin-top: 20px; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 10px;'>📈 전후 변화 분석 (Development Analysis)</h3>", unsafe_allow_html=True)
         
         valid_dates = df_global['Test_Date'].dropna().unique()
         col_dates = sorted(valid_dates)
@@ -1022,9 +1028,9 @@ elif st.session_state['yf_view_mode'] == 'Insight Analysis':
                 
                 st.markdown("##### 🔧 분석 지표 선택")
                 delta_metrics_all = {
-                    "Power: CMJ Height": "CMJ_Height_Imp_mom_",
-                    "Power: Squat Jump Height": "SquatJ_Height_Imp_mom_",
-                    "Power: CMJ RSI-mod": "CMJ_RSI_mod_Imp_mom_"
+                    "Power: CMJ 높이 (Height)": "CMJ_Height_Imp_mom_",
+                    "Power: 스쿼트 점프 높이 (Squat Jump Height)": "SquatJ_Height_Imp_mom_",
+                    "Power: 점프 효율성 (CMJ RSI-mod)": "CMJ_RSI_mod_Imp_mom_"
                 }
                 delta_mode = st.selectbox("분석 지표를 선택하세요", list(delta_metrics_all.keys()))
                 target_metric = delta_metrics_all.get(delta_mode)
@@ -1073,28 +1079,63 @@ elif st.session_state['yf_view_mode'] == 'Insight Analysis':
         
         st.divider()
         st.divider()
-        st.markdown("<h3 style='font-size: 20px; font-weight: 700; color: #111; margin-top: 30px; margin-bottom: 10px;'>2. 불균형 요주의 리스트 (Limb Asymmetry Watchlist)</h3>", unsafe_allow_html=True)
+        st.markdown("<h3 style='font-size: 20px; font-weight: 700; color: #111; margin-top: 30px; margin-bottom: 10px;'>2. 신체 불균형 요주의 리스트 (Limb Asymmetry)</h3>", unsafe_allow_html=True)
         asy_metric = st.selectbox("비대칭 분석 지표 선택", 
-                                  ["Hamstring Eccentric", "Hamstring Isometric", "Hip Adduction", "Hip Abduction", 
-                                   "Hip Flexion Kicker", "Shoulder IR", "Shoulder ER"])
+                                  ["햄스트링 신장성 (Hamstring Eccentric)", "햄스트링 등척성 (Hamstring Isometric)", "고관절 내전 (Hip Adduction)", "고관절 외전 (Hip Abduction)", 
+                                   "고관절 굴곡 (Hip Flexion)", "어깨 내회전 (Shoulder IR)", "어깨 외회전 (Shoulder ER)"])
         
-        if asy_metric == "Hamstring Eccentric":
+        ref_text = ""
+        if "Hamstring Eccentric" in asy_metric:
             col_l, col_r, ref_threshold = 'Hamstring_Ecc_L', 'Hamstring_Ecc_R', 15
-        elif asy_metric == "Hamstring Isometric":
+            ref_text = """
+            **햄스트링 신장성 근력(Eccentric) 비대칭**:
+            - 신장성 근력 불균형(**>15%**)은 햄스트링 손상의 주요 위험 요소입니다.
+            - **목표**: 좌우 차이 10% 미만 유지.
+            """
+        elif "Hamstring Isometric" in asy_metric:
             col_l, col_r, ref_threshold = 'Hamstring_ISO_L', 'Hamstring_ISO_R', 15
-        elif asy_metric == "Hip Adduction":
+            ref_text = """
+            **햄스트링 등척성 근력(Isometric) 비대칭**:
+            - VALD 및 관련 연구에 따르면, **15% 이상의 근력 불균형**은 햄스트링 부상 위험을 유의미하게 증가시킬 수 있습니다.
+            - **목표**: 좌우 차이 10% 미만 유지.
+            """
+        elif "Hip Adduction" in asy_metric:
             col_l, col_r, ref_threshold = 'HipAdd_L', 'HipAdd_R', 15
-        elif asy_metric == "Hip Abduction":
+            ref_text = """
+            **고관절 내전근(Adduction) 비대칭**:
+            - 내전근의 좌우 불균형(**>15%**)은 서혜부 통증(Groin Pain) 및 스포츠 탈장의 잠재적 위험 요인입니다.
+            - **양수 (+)**: 오른쪽 우세 / **음수 (-)**: 왼쪽 우세
+            """
+        elif "Hip Abduction" in asy_metric:
             col_l, col_r, ref_threshold = 'HipAbd_L', 'HipAbd_R', 15
-        elif asy_metric == "Hip Flexion Kicker":
-            # Research suggests >10-15% is risk. Using 15% as conservative threshold.
+            ref_text = """
+            **고관절 외전근(Abduction) 비대칭**:
+            - 중둔근을 포함한 외전근의 불균형(**>15%**)은 골반 안정성 저하 및 무릎 부상(ACL 등)과 연관될 수 있습니다.
+            """
+        elif "Hip Flexion" in asy_metric:
+            # 연구 결과에 따르면 10-15% 이상의 불균형은 부상 위험을 증가시킵니다.
             col_l, col_r, ref_threshold = 'HipFlexion_Kicker_L', 'HipFlexion_Kicker_R', 15
-        elif asy_metric == "Shoulder IR":
-            # General muscle imbalance threshold often cited as 10-15%.
+            ref_text = """
+            **고관절 굴곡근(Hip Flexion) 비대칭**:
+            - 킥 동작과 관련된 주요 근육으로, **15% 이상의 불균형**은 킥 정확도 저하 및 고관절 주변 부상 위험을 높입니다.
+            """
+        elif "Shoulder IR" in asy_metric:
+            # 일반적인 근육 불균형 임계값은 10=15% 내외입니다.
             col_l, col_r, ref_threshold = 'ShoulderIR_L', 'ShoulderIR_R', 15
-        elif asy_metric == "Shoulder ER":
-            # Shoulder ER weakness is critical. >10% asymmetry could be significant.
+            ref_text = """
+            **어깨 내회전(Internal Rotation) 비대칭**:
+            - 상체 퍼포먼스 및 어깨 안정성에 중요합니다. 15% 이상의 차이는 잠재적 위험 신호일 수 있습니다.
+            """
+        elif "Shoulder ER" in asy_metric:
+            # 어깨 외회전 약화는 중요합니다. 10% 이상 차이는 유의미할 수 있습니다.
             col_l, col_r, ref_threshold = 'ShoulderER_L', 'ShoulderER_R', 15
+            ref_text = """
+            **어깨 외회전(External Rotation) 비대칭**:
+            - 회전근개 안정성의 핵심 지표입니다. 15% 이상의 차이는 어깨 충돌 증후군 등의 위험을 시사합니다.
+            """
+
+        with st.expander(f"ℹ️ {asy_metric} 기준 및 설명"):
+            st.markdown(ref_text)
 
         asy_df = analysis_utils.calculate_asymmetry(df_insight, col_l, col_r)
         if not asy_df.empty:
@@ -1103,15 +1144,27 @@ elif st.session_state['yf_view_mode'] == 'Insight Analysis':
                 fig_lolly = analysis_utils.plot_asymmetry_lollipop(asy_df, threshold=ref_threshold)
                 if fig_lolly: st.plotly_chart(fig_lolly, use_container_width=True)
             with c_list:
-                st.markdown("##### 📋 Imbalance Watchlist")
+                st.markdown("##### 📋 불균형 요주의 리스트 (Watchlist)")
                 risk_df = asy_df[asy_df['Asymmetry'].abs() > ref_threshold].sort_values('Asymmetry', key=abs, ascending=False)
                 if not risk_df.empty:
-                    st.markdown(f":red[**High Risk ({len(risk_df)}명)**]")
+                    st.markdown(f":red[**고위험군 (High Risk) - {len(risk_df)}명**]")
                     for _, row in risk_df.iterrows(): st.caption(f"**{row['Name']}**: {row['Asymmetry']:.1f}%")
+                
+                normal_df = asy_df[asy_df['Asymmetry'].abs() <= ref_threshold]
+                if not normal_df.empty:
+                    with st.expander(f"✅ 정상 (Normal) - {len(normal_df)}명"):
+                         st.caption(", ".join(normal_df['Name'].tolist()))
 
         st.divider()
         st.divider()
         st.markdown("<h3 style='font-size: 20px; font-weight: 700; color: #111; margin-top: 30px; margin-bottom: 10px;'>3. Groin Risk (Add/Abd Ratio)</h3>", unsafe_allow_html=True)
+        with st.expander("ℹ️ 서혜부(Groin) 건강"):
+            st.markdown("""
+            **내전근 / 외전근 비율 (Add / Abd Ratio)**:
+            - 내전근(안쪽)과 외전근(바깥쪽/둔근) 사이의 힘의 균형을 측정합니다.
+            - **위험 구간 (< 0.80)**: 내전근 좌상(Strain) 위험이 높음.
+            - **목표 범위**: > 0.90 - 1.0
+            """)
         groin_df = analysis_utils.calculate_groin_risk(df_insight, 'HipAdd_L', 'HipAdd_R', 'HipAbd_L', 'HipAbd_R')
         if not groin_df.empty:
             c_chart, c_list = st.columns([2.5, 1])
@@ -1119,16 +1172,33 @@ elif st.session_state['yf_view_mode'] == 'Insight Analysis':
                 fig_groin = analysis_utils.plot_groin_risk(groin_df)
                 if fig_groin: st.plotly_chart(fig_groin, use_container_width=True)
             with c_list:
-                st.markdown("##### 📋 Risk Summary")
-                for status_label in ['High Risk (< 0.80)', 'Watch (0.80 - 0.90)']:
-                     subset = groin_df[groin_df['Ratio'].apply(lambda x: 'High' if x < 0.8 else 'Watch' if x < 0.9 else 'Good') == status_label.split()[0]]
+                st.markdown("##### 📋 위험군 요약 (Risk Summary)")
+                # Calculate Status first
+                groin_df['Status_Label'] = groin_df['Ratio'].apply(lambda x: 'High' if x < 0.8 else 'Watch' if x < 0.9 else 'Good')
+                
+                for status_key, label_display in [('High', '고위험 (High Risk: < 0.80)'), ('Watch', '관찰 필요 (Watch: 0.80 - 0.90)')]:
+                     subset = groin_df[groin_df['Status_Label'] == status_key]
                      if not subset.empty:
-                         st.markdown(f":red[**{status_label}**] ({len(subset)}명)")
+                         color = "red" if status_key == 'High' else "orange"
+                         st.markdown(f":{color}[**{label_display}**] ({len(subset)}명)")
                          for _, row in subset.iterrows(): st.caption(f"**{row['Name']}**: {row['Ratio']:.2f}")
+
+                good_subset = groin_df[groin_df['Status_Label'] == 'Good']
+                if not good_subset.empty:
+                    with st.expander(f"✅ 정상 (Good) - {len(good_subset)}명"):
+                        st.caption(", ".join(good_subset['Name'].tolist()))
 
         st.divider()
         st.divider()
         st.markdown("<h3 style='font-size: 20px; font-weight: 700; color: #111; margin-top: 30px; margin-bottom: 10px;'>4. Hamstring Profiling (Functional Ratio)</h3>", unsafe_allow_html=True)
+        with st.expander("ℹ️ 햄스트링 기능적 비율 (Eccentric / Isometric)"):
+            st.markdown("""
+            **Eccentric Peak Force / Isometric Peak Force Ratio**:
+            - **적정 범위 (Optimal)**: 1.1 ~ 1.15
+            - **< 1.1**: **신장성 근력(Eccentric) 부족**. 제동 능력 강화를 위한 훈련 필요.
+            - **> 1.15**: **등척성 근력(Isometric) 부족**. 버티는 힘 강화를 위한 훈련 필요.
+            """)
+
         if 'Hamstring_ISO_L' in df_insight.columns:
             df_insight['H_ISO_Mean'] = df_insight[['Hamstring_ISO_L','Hamstring_ISO_R']].mean(axis=1)
             df_insight['H_Ecc_Mean'] = df_insight[['Hamstring_Ecc_L','Hamstring_Ecc_R']].mean(axis=1)
@@ -1141,16 +1211,35 @@ elif st.session_state['yf_view_mode'] == 'Insight Analysis':
                 fig_ham = analysis_utils.plot_hamstring_functional_ratio(df_insight, 'H_ISO_Mean', 'H_Ecc_Mean', title="Hamstring Profile")
                 st.plotly_chart(fig_ham, use_container_width=True)
             with c_list:
-                st.markdown("##### 📋 Risk Summary")
-                # Criteria from Player Card: < 1.1 (Ecc Deficit), > 1.15 (Iso Deficit)
-                for status_label in ['Ecc Deficit (< 1.1)', 'Iso Deficit (> 1.15)']:
-                    if 'Ecc' in status_label:
-                        subset = df_insight[df_insight['Ham_Ratio'] < 1.1]
-                        color = 'red'
-                    else:
-                        subset = df_insight[df_insight['Ham_Ratio'] > 1.15]
-                        color = 'orange'
-                        
+                st.markdown("##### 📋 트레이닝 포커스 (Training Focus)")
+                
+                # Assign Status
+                def get_ham_status(r):
+                    if r < 1.1: return 'Eccentric Deficit'
+                    elif r > 1.15: return 'Isometric Deficit'
+                    else: return 'Optimal'
+                df_insight['Ham_Status'] = df_insight['Ham_Ratio'].apply(get_ham_status)
+                
+                # Tabs
+                tab_ecc, tab_iso, tab_opt = st.tabs(["🔴 신장성", "🟠 등척성", "🟢 정상"])
+                
+                with tab_ecc:
+                    subset = df_insight[df_insight['Ham_Status'] == 'Eccentric Deficit'].sort_values('Ham_Ratio')
+                    st.caption(f"**신장성 부족 ({len(subset)})**")
                     if not subset.empty:
-                        st.markdown(f":{color}[**{status_label}**] ({len(subset)}명)")
-                        for _, row in subset.iterrows(): st.caption(f"**{row['Name']}**: {row['Ham_Ratio']:.2f}")
+                        st.dataframe(subset[['Name', 'Ham_Ratio']].style.format({'Ham_Ratio': '{:.2f}'}), hide_index=True, use_container_width=True, height=450)
+                    else: st.info("해당 선수 없음")
+                    
+                with tab_iso:
+                    subset = df_insight[df_insight['Ham_Status'] == 'Isometric Deficit'].sort_values('Ham_Ratio', ascending=False)
+                    st.caption(f"**등척성 부족 ({len(subset)})**")
+                    if not subset.empty:
+                        st.dataframe(subset[['Name', 'Ham_Ratio']].style.format({'Ham_Ratio': '{:.2f}'}), hide_index=True, use_container_width=True, height=450)
+                    else: st.info("해당 선수 없음")
+
+                with tab_opt:
+                    subset = df_insight[df_insight['Ham_Status'] == 'Optimal']
+                    st.caption(f"**정상 범위 ({len(subset)})**")
+                    if not subset.empty:
+                        st.caption(", ".join(subset['Name'].tolist()))
+                    else: st.info("해당 선수 없음")
