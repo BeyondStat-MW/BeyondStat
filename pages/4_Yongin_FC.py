@@ -552,27 +552,21 @@ elif st.session_state['yf_view_mode'] == 'Player Dashboard':
                 else:
                     groin_status, groin_color = "Stable (>0.8)", "#E6002D"
 
-                # Layout: 3x1 Grid (Removed SLJ)
-                b1, b3, b4 = st.columns(3)
+                # Layout: Row 1 (3 Columns)
+                r1_c1, r1_c2, r1_c3 = st.columns(3)
                 
-                col_L = "#56B4E9" # Sky Blue
-                col_R = "#F37021" # Orange
-                
-                # --- Box 1: Jump & Elasticity ---
-                with b1:
-                    rsi_val = df_latest['CMJ_RSI_mod_Imp_mom_'].fillna(0).iloc[0] if 'CMJ_RSI_mod_Imp_mom_' in df_latest.columns else 0
-                    rsi_prev = df_prev['CMJ_RSI_mod_Imp_mom_'].fillna(0).iloc[0] if not df_prev.empty and 'CMJ_RSI_mod_Imp_mom_' in df_prev.columns else 0
-                    
+                # --- Row 1, Box 1: Jump & Elasticity (Simplified) ---
+                with r1_c1:
+                    # RSI removed from here
                     metrics_1 = [
                         ("CMJ Height", format_delta_html(c_val, c_prev, "cm")),
                         ("Squat Jump", format_delta_html(s_val, s_prev, "cm")),
-                        ("CMJ RSI-mod", format_delta_html(rsi_val, rsi_prev, "index")),
                         ("EUR", format_delta_html(eur_val, eur_prev, "ratio", decimal=2))
                     ]
                     st.markdown(create_detail_card("⚡ Jump & Elasticity", metrics_1, eur_status, eur_color), unsafe_allow_html=True)
 
-                # --- Box 3: Hamstring (Strength) ---
-                with b3:
+                # --- Row 1, Box 2: Hamstring (Strength) ---
+                with r1_c2:
                     # Get ISO Data
                     iso_l = df_latest['Hamstring_ISO_L'].fillna(0).iloc[0] if 'Hamstring_ISO_L' in df_latest.columns else 0
                     iso_r = df_latest['Hamstring_ISO_R'].fillna(0).iloc[0] if 'Hamstring_ISO_R' in df_latest.columns else 0
@@ -614,8 +608,8 @@ elif st.session_state['yf_view_mode'] == 'Player Dashboard':
                     ]
                     st.markdown(create_detail_card("🦵 Hamstring Profile", metrics_3, h_r_stat, h_r_col), unsafe_allow_html=True)
                     
-                # --- Box 4: Groin (Strength) ---
-                with b4:
+                # --- Row 1, Box 3: Groin (Strength) ---
+                with r1_c3:
                     add_asym = ((add_r - add_l) / max(add_l, add_r) * 100) if max(add_l, add_r) > 0 else 0
                     abd_asym = ((abd_r - abd_l) / max(abd_l, abd_r) * 100) if max(abd_l, abd_r) > 0 else 0
                     
@@ -641,6 +635,81 @@ elif st.session_state['yf_view_mode'] == 'Player Dashboard':
                         ("Add/Abd Ratio", f"<div style='display:flex; justify-content:flex-end; white-space:nowrap;'>{format_delta_html(ratio_l, ratio_l_prev, 'ratio', decimal=2)} <span style='margin:0 5px; color:#ccc'>/</span> {format_delta_html(ratio_r, ratio_r_prev, 'ratio', decimal=2)}</div>")
                     ]
                     st.markdown(create_detail_card("🛡️ Groin Profile", metrics_4, groin_status, groin_color), unsafe_allow_html=True)
+            
+                st.markdown("<br>", unsafe_allow_html=True) # Spacer
+
+                # Layout: Row 2 (3 Columns)
+                r2_c1, r2_c2, r2_c3 = st.columns(3)
+
+                # --- Row 2, Box 1: Other Jump Data ---
+                with r2_c1:
+                    # New Metrics: CMJ P1, P2, Landing, HopTest
+                    p1_val = df_latest['CMJ_ConcentricImpulseP1'].fillna(0).iloc[0] if 'CMJ_ConcentricImpulseP1' in df_latest.columns else 0
+                    p2_val = df_latest['CMJ_ConcentricImpulseP2'].fillna(0).iloc[0] if 'CMJ_ConcentricImpulseP2' in df_latest.columns else 0
+                    land_val = df_latest['CMJ_PeakLandingForce'].fillna(0).iloc[0] if 'CMJ_PeakLandingForce' in df_latest.columns else 0
+                    hop_rsi = df_latest['HopTest_MeanRSI'].fillna(0).iloc[0] if 'HopTest_MeanRSI' in df_latest.columns else 0
+                    
+                    # Prev
+                    p1_prev = df_prev['CMJ_ConcentricImpulseP1'].fillna(0).iloc[0] if not df_prev.empty and 'CMJ_ConcentricImpulseP1' in df_prev.columns else 0
+                    p2_prev = df_prev['CMJ_ConcentricImpulseP2'].fillna(0).iloc[0] if not df_prev.empty and 'CMJ_ConcentricImpulseP2' in df_prev.columns else 0
+                    land_prev = df_prev['CMJ_PeakLandingForce'].fillna(0).iloc[0] if not df_prev.empty and 'CMJ_PeakLandingForce' in df_prev.columns else 0
+                    hop_prev = df_prev['HopTest_MeanRSI'].fillna(0).iloc[0] if not df_prev.empty and 'HopTest_MeanRSI' in df_prev.columns else 0
+
+                    metrics_jump_detail = [
+                        ("CMJ P1 %", format_delta_html(p1_val, p1_prev, "%")),
+                        ("CMJ P2 %", format_delta_html(p2_val, p2_prev, "%")),
+                        ("CMJ Landing Force", format_delta_html(land_val, land_prev, "N")),
+                        ("Hop Test Mean RSI", format_delta_html(hop_rsi, hop_prev, ""))
+                    ]
+                    st.markdown(create_detail_card("📊 Other Jump Data", metrics_jump_detail, "Info", "#999"), unsafe_allow_html=True)
+
+                # --- Row 2, Box 2: Hip Flexion Kicker ---
+                with r2_c2:
+                    hf_l = df_latest['HipFlexion_Kicker_L'].fillna(0).iloc[0] if 'HipFlexion_Kicker_L' in df_latest.columns else 0
+                    hf_r = df_latest['HipFlexion_Kicker_R'].fillna(0).iloc[0] if 'HipFlexion_Kicker_R' in df_latest.columns else 0
+                    hf_imb = df_latest['HipFlexion_Kicker_Imbalance'].fillna(0).iloc[0] if 'HipFlexion_Kicker_Imbalance' in df_latest.columns else 0
+
+                    hf_l_prev = df_prev['HipFlexion_Kicker_L'].fillna(0).iloc[0] if not df_prev.empty and 'HipFlexion_Kicker_L' in df_prev.columns else 0
+                    hf_r_prev = df_prev['HipFlexion_Kicker_R'].fillna(0).iloc[0] if not df_prev.empty and 'HipFlexion_Kicker_R' in df_prev.columns else 0
+                    hf_imb_prev = df_prev['HipFlexion_Kicker_Imbalance'].fillna(0).iloc[0] if not df_prev.empty and 'HipFlexion_Kicker_Imbalance' in df_prev.columns else 0
+                    
+                    hf_status = "Risk" if abs(hf_imb) > 15 else "Balanced"
+                    hf_color = "#d62728" if abs(hf_imb) > 15 else "#E6002D"
+
+                    metrics_hf = [
+                        ("Left Force", format_delta_html(hf_l, hf_l_prev, "N")),
+                        ("Right Force", format_delta_html(hf_r, hf_r_prev, "N")),
+                        ("Imbalance", format_delta_html(hf_imb, hf_imb_prev, "%", inverse=True, suffix_lr=True))
+                    ]
+                    st.markdown(create_detail_card("🦵 Hip Flexion Kicker", metrics_hf, hf_status, hf_color), unsafe_allow_html=True)
+
+                # --- Row 2, Box 3: Shoulder Profile ---
+                with r2_c3:
+                    ir_l = df_latest['ShoulderIR_L'].fillna(0).iloc[0] if 'ShoulderIR_L' in df_latest.columns else 0
+                    ir_r = df_latest['ShoulderIR_R'].fillna(0).iloc[0] if 'ShoulderIR_R' in df_latest.columns else 0
+                    ir_imb = df_latest['ShoulderIR_Imbalance'].fillna(0).iloc[0] if 'ShoulderIR_Imbalance' in df_latest.columns else 0
+
+                    er_l = df_latest['ShoulderER_L'].fillna(0).iloc[0] if 'ShoulderER_L' in df_latest.columns else 0
+                    er_r = df_latest['ShoulderER_R'].fillna(0).iloc[0] if 'ShoulderER_R' in df_latest.columns else 0
+                    try:
+                        er_imb = df_latest['ShoulderER_Imbalance'].fillna(0).iloc[0] if 'ShoulderER_Imbalance' in df_latest.columns else 0
+                    except: er_imb = 0
+
+                    # Prev
+                    ir_l_prev = df_prev['ShoulderIR_L'].fillna(0).iloc[0] if not df_prev.empty and 'ShoulderIR_L' in df_prev.columns else 0
+                    ir_r_prev = df_prev['ShoulderIR_R'].fillna(0).iloc[0] if not df_prev.empty and 'ShoulderIR_R' in df_prev.columns else 0
+                    er_l_prev = df_prev['ShoulderER_L'].fillna(0).iloc[0] if not df_prev.empty and 'ShoulderER_L' in df_prev.columns else 0
+                    er_r_prev = df_prev['ShoulderER_R'].fillna(0).iloc[0] if not df_prev.empty and 'ShoulderER_R' in df_prev.columns else 0
+
+                    sh_status = "Balanced"
+                    sh_color = "#E6002D"
+
+                    metrics_sh = [
+                        ("IR (L/R)", f"<div style='display:flex; justify-content:flex-end; white-space:nowrap;'>{format_delta_html(ir_l, ir_l_prev, 'N')} <span style='margin:0 5px; color:#ccc'>/</span> {format_delta_html(ir_r, ir_r_prev, 'N')}</div>"),
+                        ("ER (L/R)", f"<div style='display:flex; justify-content:flex-end; white-space:nowrap;'>{format_delta_html(er_l, er_l_prev, 'N')} <span style='margin:0 5px; color:#ccc'>/</span> {format_delta_html(er_r, er_r_prev, 'N')}</div>"),
+                        ("IR Imbalance", format_delta_html(ir_imb, 0, "%", inverse=True, suffix_lr=True)) # Prev not tracked easily for now
+                    ]
+                    st.markdown(create_detail_card("💪 Shoulder Profile", metrics_sh, sh_status, sh_color), unsafe_allow_html=True)
             
             st.divider()
 
@@ -814,6 +883,15 @@ elif st.session_state['yf_view_mode'] == 'Player Dashboard':
             with r2_c3:
                  create_ratio_dot_chart(df_p, 'Hip_Ratio_Trend', 'Hip Ratio Trend (Add/Abd)', 0.9, 1.0, [0.5, 1.5])
                  
+            # --- Row 3: Hip Flexion & Shoulder ---
+            r3_c1, r3_c2, r3_c3 = st.columns(3)
+            with r3_c1:
+                 create_strength_diverging_chart(df_p, 'HipFlexion_Kicker_L', 'HipFlexion_Kicker_R', "Hip Flexion Kicker (L/R)")
+            with r3_c2:
+                 create_strength_diverging_chart(df_p, 'ShoulderIR_L', 'ShoulderIR_R', "Shoulder IR (L/R)")
+            with r3_c3:
+                 create_strength_diverging_chart(df_p, 'ShoulderER_L', 'ShoulderER_R', "Shoulder ER (L/R)")
+
             st.divider()
 
 # --- VIEW: Insight Analysis ---
