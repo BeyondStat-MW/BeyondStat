@@ -314,9 +314,9 @@ if st.session_state['yf_view_mode'] == 'Team Dashboard':
 
     # --- Strength Metrics ---
     st.subheader("💪 근력 분석 (Strength Metrics)")
-    metric_opt_s = st.selectbox("지표 선택 (Select Metric)", ["Hamstring Ecc", "Hamstring ISO", "HipAdd", "HipAbd", "Hip Flexion"], key="team_str")
+    metric_opt_s = st.selectbox("지표 선택 (Select Metric)", ["Hamstring Ecc", "Hamstring ISO", "HipAdd", "HipAbd", "Hip Flexion", "Shoulder IR", "Shoulder ER"], key="team_str")
     
-    col_map_s = {"Hamstring Ecc": "Hamstring_Ecc_Avg", "Hamstring ISO": "Hamstring_ISO_Avg", "HipAdd": "HipAdd_Avg", "HipAbd": "HipAbd_Avg", "Hip Flexion": "HipFlex_Avg"}
+    col_map_s = {"Hamstring Ecc": "Hamstring_Ecc_Avg", "Hamstring ISO": "Hamstring_ISO_Avg", "HipAdd": "HipAdd_Avg", "HipAbd": "HipAbd_Avg", "Hip Flexion": "HipFlex_Avg", "Shoulder IR": "ShoulderIR_Avg", "Shoulder ER": "ShoulderER_Avg"}
     y_col_s = col_map_s[metric_opt_s]
     
     if y_col_s in df_team.columns:
@@ -951,8 +951,7 @@ elif st.session_state['yf_view_mode'] == 'Insight Analysis':
             'Strength': [
                 'Hamstring_Ecc_L', 'Hamstring_Ecc_R', 
                 'Hamstring_ISO_L', 'Hamstring_ISO_R', 
-                'HipAdd_L', 'HipAdd_R',
-                'ShoulderIR_L', 'ShoulderIR_R', 'ShoulderER_L', 'ShoulderER_R'
+                'HipAdd_L', 'HipAdd_R'
             ]
         }
         
@@ -975,7 +974,7 @@ elif st.session_state['yf_view_mode'] == 'Insight Analysis':
                     <div style='margin-bottom: 10px;'>각 지표의 팀 내 백분위(Percentile)를 평균하여 산출합니다. (S: 90+, A: 70+, B: 40+, C: 40 미만)</div>
                     <ul style='margin: 0; padding-left: 18px; line-height: 1.6;'>
                         <li><b>파워 (Power)</b>: CMJ 높이, SJ 높이, RSI-mod</li>
-                        <li><b>근력 (Strength)</b>: 햄스트링(신장성/등척성), 서혜부(내전근), 어깨(IR/ER)</li>
+                        <li><b>근력 (Strength)</b>: 햄스트링(신장성/등척성), 서혜부(내전근)</li>
                     </ul>
                 </div>
                 """, unsafe_allow_html=True)
