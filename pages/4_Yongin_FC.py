@@ -348,7 +348,9 @@ elif st.session_state['yf_view_mode'] == 'Player Dashboard':
             p_end = df['Test_Date'].max()
             st.session_state['yf_start_date'] = p_start
             st.session_state['yf_end_date'] = p_end
-            # Force update pickers via state keys (Streamlit handles this if keys match)
+            # Sync pickers
+            st.session_state['yf_start_date_picker'] = p_start
+            st.session_state['yf_end_date_picker'] = p_end
     
     c_header, c_sel = st.columns([3, 1])
     with c_sel:
@@ -489,9 +491,9 @@ elif st.session_state['yf_view_mode'] == 'Player Dashboard':
 
                     if s_val > 0:
                         eur_val = c_val / s_val
-                        if eur_val > 1.15: eur_status, eur_color = "Strength (근력 우세)", "#EF553B" # Red
+                        if eur_val > 1.15: eur_status, eur_color = "근력 부족 (Strength Deficit)", "#EF553B" # Red
                         elif eur_val >= 1.1: eur_status, eur_color = "Optimal (이상적)", "#00CC96" # Green
-                        else: eur_status, eur_color = "Elastic (탄력적)", "#636EFA" # Blue
+                        else: eur_status, eur_color = "탄력 부족 (Elastic Deficit)", "#636EFA" # Blue
                     
                     if s_prev > 0:
                         eur_prev = c_prev / s_prev
@@ -945,16 +947,12 @@ elif st.session_state['yf_view_mode'] == 'Insight Analysis':
         st.markdown("<h3 style='font-size: 24px; font-weight: 700; color: #111; margin-top: 20px; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 10px;'>📊 팀 피지컬 리포트 (Team Status)</h3>", unsafe_allow_html=True)
         
         tier_metrics = {
-            'Power': [
-                'CMJ_Height_Imp_mom_' if 'CMJ_Height_Imp_mom_' in df_insight.columns else 'CMJ_Height_Imp_mom',
-                'SquatJ_Height_Imp_mom_' if 'SquatJ_Height_Imp_mom_' in df_insight.columns else 'SquatJ_Height_Imp_mom',
-                'CMJ_RSI_mod_Imp_mom_' if 'CMJ_RSI_mod_Imp_mom_' in df_insight.columns else 'CMJ_RSI_mod_Imp_mom',
-                'CMJ_ConcentricImpulseP1', 'CMJ_ConcentricImpulseP2', 'CMJ_PeakLandingForce', 'HopTest_MeanRSI'
-            ],
+            'Power': ['CMJ_Height_Imp_mom_', 'SquatJ_Height_Imp_mom_', 'CMJ_RSI_mod_Imp_mom_'],
             'Strength': [
-                'Hamstring_Ecc_L', 'Hamstring_Ecc_R', 'Hamstring_ISO_L', 'Hamstring_ISO_R',
-                'HipAdd_L', 'HipAdd_R', 'HipAbd_L', 'HipAbd_R',
-                'HipFlexion_Kicker_L', 'HipFlexion_Kicker_R'
+                'Hamstring_Ecc_L', 'Hamstring_Ecc_R', 
+                'Hamstring_ISO_L', 'Hamstring_ISO_R', 
+                'HipAdd_L', 'HipAdd_R',
+                'ShoulderIR_L', 'ShoulderIR_R', 'ShoulderER_L', 'ShoulderER_R'
             ]
         }
         
@@ -972,12 +970,12 @@ elif st.session_state['yf_view_mode'] == 'Insight Analysis':
                 st.dataframe(top5_overall[['Name', 'Physical_Score', 'Tier']].style.format({'Physical_Score': '{:.1f}'}), hide_index=True, use_container_width=True)
                 
                 st.markdown("""
-                <div style='background-color: #f8f9fa; padding: 10px; border-radius: 5px; margin-top: 10px; font-size: 12px; color: #555;'>
-                    <i><b>피지컬 티어 점수 (Physical Tier Score)</b> = (파워 랭킹 + 근력 랭킹) / 2</i><br>
-                    <i>S (상위 20%), A (20-50%), B (50-80%), C (하위 20%)</i>
-                    <ul style='margin-top: 5px; padding-left: 20px;'>
-                        <li><b>파워 (Power)</b>: CMJ, Squat Jump, Hop Test</li>
-                        <li><b>근력 (Strength)</b>: 햄스트링(Ecc/ISO), 고관절(Add/Abd), 고관절 굴곡</li>
+                <div style='background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 10px; font-size: 13px; color: #444; border-left: 4px solid #E6002D;'>
+                    <div style='font-weight: 800; margin-bottom: 5px; color: #111;'>ℹ️ 피지컬 티어 점수 (Physical Tier Score) 안내</div>
+                    <div style='margin-bottom: 10px;'>각 지표의 팀 내 백분위(Percentile)를 평균하여 산출합니다. (S: 90+, A: 70+, B: 40+, C: 40 미만)</div>
+                    <ul style='margin: 0; padding-left: 18px; line-height: 1.6;'>
+                        <li><b>파워 (Power)</b>: CMJ 높이, SJ 높이, RSI-mod</li>
+                        <li><b>근력 (Strength)</b>: 햄스트링(신장성/등척성), 서혜부(내전근), 어깨(IR/ER)</li>
                     </ul>
                 </div>
                 """, unsafe_allow_html=True)
@@ -1054,10 +1052,10 @@ elif st.session_state['yf_view_mode'] == 'Insight Analysis':
         
         with st.expander("ℹ️ EUR 지표란?"):
             st.markdown("""
-            **신장 단축 주기 효율성 (EUR)** = CMJ / Squat Jump
-            - **< 1.1**: **Elastic (탄력적)**
-            - **1.1 ~ 1.15**: **Optimal (이상적)**
-            - **> 1.15**: **Strength (근력 우세)**
+            **피지컬 티어 점수 (Physical Tier Score)** = (파워 랭킹 + 근력 랭킹) / 2
+            - **SCORING**: 각 지표의 팀 내 백분위 랭킹 평균으로 산출 (S: 90+, A: 70+, B: 40+, C: 40미만)
+            - **파워(Power)**: CMJ 높이, SJ 높이, RSI-mod (탄력성 지표)
+            - **근력(Strength)**: 햄스트링(신장성/등척성), 서혜부(내전근), 어깨(IR/ER)
             """)
 
         eur_df = analysis_utils.calculate_eur(df_insight, col_cmj, col_sj)
