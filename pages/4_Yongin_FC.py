@@ -969,7 +969,10 @@ elif st.session_state['yf_view_mode'] == 'Insight Analysis':
                 
                 st.markdown("""
                 <div style='background-color: #f8f9fa; padding: 10px; border-radius: 5px; margin-top: 10px; font-size: 12px; color: #555;'>
-                    <i><b>Physical Tier Score</b> = (Power Rank + Strength Rank) / 2</i>
+                    <i><b>Physical Tier Score</b> = (Power Rank + Strength Rank) / 2</i><br>
+                    <span style='color: #888; font-size: 11px;'>
+                    • <b>S Tier</b>: Score ≥ 80 &nbsp;|&nbsp; • <b>A Tier</b>: ≥ 60 &nbsp;|&nbsp; • <b>B Tier</b>: ≥ 40 &nbsp;|&nbsp; • <b>C Tier</b>: < 40
+                    </span>
                 </div>
                 """, unsafe_allow_html=True)
 
