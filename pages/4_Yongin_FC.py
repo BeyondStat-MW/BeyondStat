@@ -221,11 +221,6 @@ def safe_mean(df, col):
     return 0
 
 def calculate_derived_cols(df):
-    # SLJ: Prioritize L/R average, fallback to single column
-    if 'SLJ_Height_L' in df.columns and 'SLJ_Avg' not in df.columns:
-        df['SLJ_Avg'] = df[['SLJ_Height_L', 'SLJ_Height_R']].mean(axis=1)
-    elif 'SLJ_Height_Imp_mom_' in df.columns and 'SLJ_Avg' not in df.columns:
-         df['SLJ_Avg'] = df['SLJ_Height_Imp_mom_']
 
     if 'Hamstring_Ecc_L' in df.columns and 'Hamstring_Ecc_Avg' not in df.columns:
         df['Hamstring_Ecc_Avg'] = df[['Hamstring_Ecc_L', 'Hamstring_Ecc_R']].mean(axis=1)
@@ -292,12 +287,11 @@ if st.session_state['yf_view_mode'] == 'Team Dashboard':
     
     # --- Power Metrics ---
     st.subheader("⚡ 파워 분석 (Power Metrics)")
-    metric_opt = st.selectbox("지표 선택 (Select Metric)", ["CMJ", "SquatJ", "SLJ", "HopTest RSI"], key="team_pow")
+    metric_opt = st.selectbox("지표 선택 (Select Metric)", ["CMJ", "SquatJ", "HopTest RSI"], key="team_pow")
     
     col_map = {
         "CMJ": col_cmj, 
         "SquatJ": col_sj, 
-        "SLJ": "SLJ_Avg",
         "HopTest RSI": "HopTest_MeanRSI"
     }
     y_col = col_map[metric_opt]
@@ -558,8 +552,8 @@ elif st.session_state['yf_view_mode'] == 'Player Dashboard':
                 else:
                     groin_status, groin_color = "Stable (>0.8)", "#E6002D"
 
-                # Layout: 4x1 Grid
-                b1, b2, b3, b4 = st.columns(4)
+                # Layout: 3x1 Grid (Removed SLJ)
+                b1, b3, b4 = st.columns(3)
                 
                 col_L = "#56B4E9" # Sky Blue
                 col_R = "#F37021" # Orange
@@ -577,15 +571,6 @@ elif st.session_state['yf_view_mode'] == 'Player Dashboard':
                     ]
                     st.markdown(create_detail_card("⚡ Jump & Elasticity", metrics_1, eur_status, eur_color), unsafe_allow_html=True)
 
-                # --- Box 2: Single Leg Jump (Balance) ---
-                with b2:
-                    metrics_2 = [
-                        ("Left Height", format_delta_html(l_val, l_prev, "cm")),
-                        ("Right Height", format_delta_html(r_val, r_prev, "cm")),
-                        ("Asymmetry", format_delta_html(slj_asym, slj_asym_prev, "%", inverse=True, suffix_lr=True)) 
-                    ]
-                    st.markdown(create_detail_card("⚖️ Single Leg Jump", metrics_2, slj_status, slj_color), unsafe_allow_html=True)
-                
                 # --- Box 3: Hamstring (Strength) ---
                 with b3:
                     # Get ISO Data
@@ -765,10 +750,8 @@ elif st.session_state['yf_view_mode'] == 'Player Dashboard':
             with p_c2:
                 create_trend_chart(df_p, {'SquatJ': col_sj}, "Squat Jump Height", 'line')
             with p_c3:
-                create_trend_chart(df_p, {
-                    'Left': 'SLJ_Height_L_Imp_mom_', 
-                    'Right': 'SLJ_Height_R_Imp_mom_'
-                }, "Single Leg Jump", 'line')
+                # Replaced SLJ with HopTest
+                create_trend_chart(df_p, {'HopTest RSI': 'HopTest_MeanRSI'}, "HopTest Mean RSI", 'line')
 
             # 2. Strength Metrics (3x2 Grid)
             st.markdown("### 💪 근력 분석 (Strength Metrics)")
@@ -881,8 +864,7 @@ elif st.session_state['yf_view_mode'] == 'Insight Analysis':
             'Strength': [
                 'Hamstring_Ecc_L', 'Hamstring_Ecc_R', 'Hamstring_ISO_L', 'Hamstring_ISO_R',
                 'HipAdd_L', 'HipAdd_R', 'HipAbd_L', 'HipAbd_R'
-            ],
-            'Balance': ['SLJ_Height_L_Imp_mom_', 'SLJ_Height_R_Imp_mom_']
+            ]
         }
         
         tier_df = analysis_utils.calculate_physical_tier(df_insight, tier_metrics)
@@ -923,10 +905,8 @@ elif st.session_state['yf_view_mode'] == 'Insight Analysis':
                      st.dataframe(top5_str[['Name', 'Strength_Score']].style.format({'Strength_Score': '{:.1f}'}), hide_index=True, use_container_width=True)
 
             with cat3:
-                 st.markdown("**⚖️ Balance Rank**")
-                 if 'Balance_Score' in tier_df.columns:
-                     top5_bal = tier_df.sort_values('Balance_Score', ascending=False).head(5)
-                     st.dataframe(top5_bal[['Name', 'Balance_Score']].style.format({'Balance_Score': '{:.1f}'}), hide_index=True, use_container_width=True)
+                 st.markdown("**⚖️ Balance Rank (Disabled)**")
+                 st.info("SLJ data removed.")
 
             st.markdown("---")
             with st.expander("📋 View Full Tier List"):
@@ -958,9 +938,7 @@ elif st.session_state['yf_view_mode'] == 'Insight Analysis':
                 delta_metrics_all = {
                     "Power: CMJ Height": "CMJ_Height_Imp_mom_",
                     "Power: Squat Jump Height": "SquatJ_Height_Imp_mom_",
-                    "Power: CMJ RSI-mod": "CMJ_RSI_mod_Imp_mom_",
-                    "Balance: SLJ (L)": "SLJ_Height_L_Imp_mom_",
-                    "Balance: SLJ (R)": "SLJ_Height_R_Imp_mom_"
+                    "Power: CMJ RSI-mod": "CMJ_RSI_mod_Imp_mom_"
                 }
                 delta_mode = st.selectbox("분석 지표를 선택하세요", list(delta_metrics_all.keys()))
                 target_metric = delta_metrics_all.get(delta_mode)
@@ -1011,11 +989,9 @@ elif st.session_state['yf_view_mode'] == 'Insight Analysis':
         st.divider()
         st.markdown("<h3 style='font-size: 20px; font-weight: 700; color: #111; margin-top: 30px; margin-bottom: 10px;'>2. 불균형 요주의 리스트 (Limb Asymmetry Watchlist)</h3>", unsafe_allow_html=True)
         asy_metric = st.selectbox("비대칭 분석 지표 선택", 
-                                  ["Single Leg Jump (SLJ)", "Hamstring Eccentric", "Hamstring Isometric", "Hip Adduction", "Hip Abduction"])
+                                  ["Hamstring Eccentric", "Hamstring Isometric", "Hip Adduction", "Hip Abduction"])
         
-        if asy_metric == "Single Leg Jump (SLJ)":
-            col_l, col_r, ref_threshold = 'SLJ_Height_L_Imp_mom_', 'SLJ_Height_R_Imp_mom_', 10
-        elif asy_metric == "Hamstring Eccentric":
+        if asy_metric == "Hamstring Eccentric":
             col_l, col_r, ref_threshold = 'Hamstring_Ecc_L', 'Hamstring_Ecc_R', 15
         elif asy_metric == "Hamstring Isometric":
             col_l, col_r, ref_threshold = 'Hamstring_ISO_L', 'Hamstring_ISO_R', 15
