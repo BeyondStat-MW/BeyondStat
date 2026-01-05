@@ -710,8 +710,8 @@ elif st.session_state['yf_view_mode'] == 'Player Dashboard':
 
                     metrics_sh = [
                         ("IR (L/R)", f"<div style='display:flex; justify-content:flex-end; white-space:nowrap;'>{format_delta_html(ir_l, ir_l_prev, 'N')} <span style='margin:0 5px; color:#ccc'>/</span> {format_delta_html(ir_r, ir_r_prev, 'N')}</div>"),
+                        ("IR Imbalance", format_delta_html(ir_imb, 0, "%", inverse=True, suffix_lr=True)),
                         ("ER (L/R)", f"<div style='display:flex; justify-content:flex-end; white-space:nowrap;'>{format_delta_html(er_l, er_l_prev, 'N')} <span style='margin:0 5px; color:#ccc'>/</span> {format_delta_html(er_r, er_r_prev, 'N')}</div>"),
-                        ("IR Imbalance", format_delta_html(ir_imb, 0, "%", inverse=True, suffix_lr=True)), # Prev not tracked easily for now
                         ("ER Imbalance", format_delta_html(er_imb, 0, "%", inverse=True, suffix_lr=True))
                     ]
                     st.markdown(create_detail_card("💪 Shoulder Profile", metrics_sh, sh_status, sh_color), unsafe_allow_html=True)
