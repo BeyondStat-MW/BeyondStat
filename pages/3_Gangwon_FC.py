@@ -563,7 +563,8 @@ elif st.session_state['gw_view_mode'] == 'Player Dashboard':
                 
                 # Use Direct Asymmetry Column
                 if col_slj_asym in df_latest.columns:
-                    slj_asym = df_latest[col_slj_asym].fillna(0).iloc[0]
+                    # Coerce to numeric in case it's loaded as string
+                    slj_asym = pd.to_numeric(df_latest[col_slj_asym], errors='coerce').fillna(0).iloc[0]
                 else:
                     # Fallback
                     max_slj = max(l_val, r_val)
