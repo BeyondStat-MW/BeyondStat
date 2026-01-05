@@ -546,23 +546,30 @@ elif st.session_state['gw_view_mode'] == 'Player Dashboard':
                     if s_prev > 0:
                         eur_prev = c_prev / s_prev
 
-                # 2. SLJ Asymmetry
+                # 2. SLJ Asymmetry (Updated to use Direct Column)
+                col_slj_asym = 'SLJ_Height_Asymmetry_Imp_mom_'
                 slj_asym = 0
                 slj_status = "Balanced"
                 slj_color = "#006442"
-                col_slj_l = 'SLJ_Height_L_Imp_mom_'
-                col_slj_r = 'SLJ_Height_R_Imp_mom_'
+
+                # Check L/R just for display, but Asym from column
+                if col_slj_l in df_latest.columns: l_val = df_latest[col_slj_l].fillna(0).iloc[0]
+                else: l_val = 0
+                if col_slj_r in df_latest.columns: r_val = df_latest[col_slj_r].fillna(0).iloc[0]
+                else: r_val = 0
                 
-                if col_slj_l in df_latest.columns and col_slj_r in df_latest.columns:
-                    l_val = df_latest[col_slj_l].fillna(0).iloc[0]
-                    r_val = df_latest[col_slj_r].fillna(0).iloc[0]
+                # Use Direct Asymmetry Column
+                if col_slj_asym in df_latest.columns:
+                    slj_asym = df_latest[col_slj_asym].fillna(0).iloc[0]
+                else:
+                    # Fallback
                     max_slj = max(l_val, r_val)
-                    if max_slj > 0:
-                        slj_asym = ((r_val - l_val) / max_slj) * 100
-                        if abs(slj_asym) > 10: 
-                            slj_status, slj_color = f"Imbalance ({slj_asym:.1f}%)", "#d62728"
-                        else:
-                            slj_status, slj_color = f"Normal ({slj_asym:.1f}%)", "#006442"
+                    if max_slj > 0: slj_asym = ((r_val - l_val) / max_slj) * 100
+
+                if abs(slj_asym) > 10: 
+                    slj_status, slj_color = f"Imbalance ({slj_asym:.1f}%)", "#d62728"
+                else:
+                    slj_status, slj_color = f"Normal ({slj_asym:.1f}%)", "#006442"
 
                 # 3. Strength Asymmetry (Hamstring Eccentric)
                 ham_asym = 0
@@ -610,7 +617,7 @@ elif st.session_state['gw_view_mode'] == 'Player Dashboard':
                     metrics_1 = [
                         ("CMJ Height", format_delta_html(c_val, c_prev, "cm")),
                         ("Squat Jump", format_delta_html(s_val, s_prev, "cm")),
-                        ("CMJ RSI-mod", format_delta_html(rsi_val, rsi_prev, "index")),
+                        ("CMJ RSI-mod", format_delta_html(rsi_val, rsi_prev, "index", decimal=2)),
                         ("EUR", format_delta_html(eur_val, eur_prev, "ratio", decimal=2))
                     ]
                     st.markdown(create_detail_card("⚡ Jump & Elasticity", metrics_1, eur_status, eur_color), unsafe_allow_html=True)
@@ -629,7 +636,7 @@ elif st.session_state['gw_view_mode'] == 'Player Dashboard':
                     metrics_2 = [
                         ("Left Height", format_delta_html(l_val, l_prev, "cm")),
                         ("Right Height", format_delta_html(r_val, r_prev, "cm")),
-                        ("Asymmetry", format_delta_html(slj_asym, slj_asym_prev, "%", inverse=True, suffix_lr=True)) 
+                        ("Asymmetry", format_delta_html(slj_asym, slj_asym_prev, "", inverse=True, suffix_lr=True)) 
                     ]
                     st.markdown(create_detail_card("⚖️ Single Leg Jump", metrics_2, slj_status, slj_color), unsafe_allow_html=True)
                 
@@ -669,9 +676,9 @@ elif st.session_state['gw_view_mode'] == 'Player Dashboard':
                     
                     metrics_3 = [
                         ("Eccentric (L/R)", f"<div style='display:flex; justify-content:flex-end; white-space:nowrap;'>{format_delta_html(h_l, h_l_prev, 'N')} <span style='margin:0 5px; color:#ccc'>/</span> {format_delta_html(h_r, h_r_prev, 'N')}</div>"),
-                        ("Ecc. Imbalance", format_delta_html(ham_asym, ham_asym_prev, "%", inverse=True, suffix_lr=True)),
+                        ("Ecc. Imbalance", format_delta_html(ham_asym, ham_asym_prev, "", inverse=True, suffix_lr=True)),
                         ("Isometric (L/R)", f"<div style='display:flex; justify-content:flex-end; white-space:nowrap;'>{format_delta_html(iso_l, iso_l_prev, 'N')} <span style='margin:0 5px; color:#ccc'>/</span> {format_delta_html(iso_r, iso_r_prev, 'N')}</div>"),
-                        ("Iso. Imbalance", format_delta_html(iso_asym, iso_asym_prev, "%", inverse=True, suffix_lr=True)),
+                        ("Iso. Imbalance", format_delta_html(iso_asym, iso_asym_prev, "", inverse=True, suffix_lr=True)),
                         ("Ecc/Iso Ratio", format_delta_html(ham_ratio, ham_ratio_prev, "ratio", decimal=2)) 
                     ]
                     st.markdown(create_detail_card("🦵 Hamstring Profile", metrics_3, h_r_stat, h_r_col), unsafe_allow_html=True)
