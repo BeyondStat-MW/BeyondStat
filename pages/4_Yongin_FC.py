@@ -656,6 +656,7 @@ elif st.session_state['yf_view_mode'] == 'Player Dashboard':
                     hop_prev = df_prev['HopTest_MeanRSI'].fillna(0).iloc[0] if not df_prev.empty and 'HopTest_MeanRSI' in df_prev.columns else 0
 
                     metrics_jump_detail = [
+                        ("CMJ RSI-mod", format_delta_html(rsi_val, rsi_prev, "index")),
                         ("CMJ P1 %", format_delta_html(p1_val, p1_prev, "%")),
                         ("CMJ P2 %", format_delta_html(p2_val, p2_prev, "%")),
                         ("CMJ Landing Force", format_delta_html(land_val, land_prev, "N")),
@@ -707,7 +708,8 @@ elif st.session_state['yf_view_mode'] == 'Player Dashboard':
                     metrics_sh = [
                         ("IR (L/R)", f"<div style='display:flex; justify-content:flex-end; white-space:nowrap;'>{format_delta_html(ir_l, ir_l_prev, 'N')} <span style='margin:0 5px; color:#ccc'>/</span> {format_delta_html(ir_r, ir_r_prev, 'N')}</div>"),
                         ("ER (L/R)", f"<div style='display:flex; justify-content:flex-end; white-space:nowrap;'>{format_delta_html(er_l, er_l_prev, 'N')} <span style='margin:0 5px; color:#ccc'>/</span> {format_delta_html(er_r, er_r_prev, 'N')}</div>"),
-                        ("IR Imbalance", format_delta_html(ir_imb, 0, "%", inverse=True, suffix_lr=True)) # Prev not tracked easily for now
+                        ("IR Imbalance", format_delta_html(ir_imb, 0, "%", inverse=True, suffix_lr=True)), # Prev not tracked easily for now
+                        ("ER Imbalance", format_delta_html(er_imb, 0, "%", inverse=True, suffix_lr=True))
                     ]
                     st.markdown(create_detail_card("💪 Shoulder Profile", metrics_sh, sh_status, sh_color), unsafe_allow_html=True)
             
