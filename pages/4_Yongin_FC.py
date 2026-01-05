@@ -1087,10 +1087,13 @@ elif st.session_state['yf_view_mode'] == 'Insight Analysis':
         elif asy_metric == "Hip Abduction":
             col_l, col_r, ref_threshold = 'HipAbd_L', 'HipAbd_R', 15
         elif asy_metric == "Hip Flexion Kicker":
+            # Research suggests >10-15% is risk. Using 15% as conservative threshold.
             col_l, col_r, ref_threshold = 'HipFlexion_Kicker_L', 'HipFlexion_Kicker_R', 15
         elif asy_metric == "Shoulder IR":
+            # General muscle imbalance threshold often cited as 10-15%.
             col_l, col_r, ref_threshold = 'ShoulderIR_L', 'ShoulderIR_R', 15
         elif asy_metric == "Shoulder ER":
+            # Shoulder ER weakness is critical. >10% asymmetry could be significant.
             col_l, col_r, ref_threshold = 'ShoulderER_L', 'ShoulderER_R', 15
 
         asy_df = analysis_utils.calculate_asymmetry(df_insight, col_l, col_r)
