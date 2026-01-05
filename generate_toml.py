@@ -11,10 +11,7 @@ def generate_toml():
             key_content = json.load(f)
             print("\n[gangwon_service_account]")
             for k, v in key_content.items():
-                if k == "private_key":
-                    print(f'{k} = """{v}"""')
-                else:
-                    print(f'{k} = "{v}"')
+                print(f'{k} = {json.dumps(v)}')
     else:
         print("\n# [WARNING] gangwon_fc/gangwon-key.json not found!")
 
@@ -24,10 +21,7 @@ def generate_toml():
             key_content = json.load(f)
             print("\n[kleague_service_account]")
             for k, v in key_content.items():
-                if k == "private_key":
-                    print(f'{k} = """{v}"""')
-                else:
-                    print(f'{k} = "{v}"')
+                print(f'{k} = {json.dumps(v)}')
     
     # 3. Yoon Center
     if os.path.exists("ycg-key.json"):
@@ -35,10 +29,7 @@ def generate_toml():
             key_content = json.load(f)
             print("\n[ycg_service_account]")
             for k, v in key_content.items():
-                if k == "private_key":
-                    print(f'{k} = """{v}"""')
-                else:
-                    print(f'{k} = "{v}"')
+                print(f'{k} = {json.dumps(v)}')
 
     # 4. Yongin FC
     if os.path.exists("yongin_fc/yongin-key.json"):
@@ -46,10 +37,7 @@ def generate_toml():
             key_content = json.load(f)
             print("\n[yongin_service_account]")
             for k, v in key_content.items():
-                if k == "private_key":
-                    print(f'{k} = """{v}"""')
-                else:
-                    print(f'{k} = "{v}"')
+                print(f'{k} = {json.dumps(v)}')
 
 if __name__ == "__main__":
     generate_toml()
