@@ -76,7 +76,8 @@ def get_db_client():
             credentials = service_account.Credentials.from_service_account_info(
                 key_info, scopes=scopes
             )
-         except Exception: pass
+         except Exception as e:
+                st.error(f"Gangwon Secret Load Error: {e}")
             
     # 2. Try File (Local Development)
     if not credentials:
@@ -158,8 +159,8 @@ def get_full_team_data():
                 return df
                 
         except Exception as e:
-            print(f"Team Data Query Failed: {e}")
-            pass
+            st.error(f"Team Data Query Failed: {e}")
+            return pd.DataFrame()
             
     return pd.DataFrame()
 
