@@ -58,23 +58,26 @@ def get_db_client():
     
     # 1. Try Secrets (Cloud Deployment)
     # Check for standard 'gcp_service_account' or custom 'yongin_service_account'
-    if "gcp_service_account" in st.secrets:
+    # FORCE SKIP generic account to prevent Gangwon crossover
+    if "gcp_service_account" in st.secrets and False: # Disabled for Yongin isolation
         try:
             key_info = dict(st.secrets["gcp_service_account"])
-            # Aggressive sanitization for copy-paste errors
+            # Perfectionist sanitization for copy-paste errors
             if "private_key" in key_info:
                 pk = key_info["private_key"].replace("\\n", "\n")
-                lines = pk.split("\n")
-                sanitized = []
-                for l in lines:
-                    l = l.strip()
-                    if not l: continue
-                    if l.startswith("---"):
-                        sanitized.append(l)
-                    else:
-                        l = re.sub(r'[^A-Za-z0-9+/=]', '', l)
-                        if l: sanitized.append(l)
-                key_info["private_key"] = "\n".join(sanitized)
+                match = re.search(r'(-----BEGIN [^-]+-----)(.*?)(-----END [^-]+-----)', pk, re.DOTALL)
+                if match:
+                    header, body, footer = match.groups()
+                    body = re.sub(r'[^A-Za-z0-9+/=]', '', body)
+                    
+                    # Self-healing: Base64 must be a multiple of 4
+                    if len(body) % 4 != 0:
+                        if len(body) % 4 == 1:
+                            body = body[:-1]
+                        else:
+                            body += "=" * (4 - (len(body) % 4))
+
+                    key_info["private_key"] = f"{header}\n{body}\n{footer}"
                 
             credentials = service_account.Credentials.from_service_account_info(
                 key_info, scopes=scopes
@@ -86,20 +89,22 @@ def get_db_client():
     elif "yongin_service_account" in st.secrets:
          try:
             key_info = dict(st.secrets["yongin_service_account"])
-            # Aggressive sanitization for copy-paste errors
+            # Perfectionist sanitization for copy-paste errors
             if "private_key" in key_info:
                 pk = key_info["private_key"].replace("\\n", "\n")
-                lines = pk.split("\n")
-                sanitized = []
-                for l in lines:
-                    l = l.strip()
-                    if not l: continue
-                    if l.startswith("---"):
-                        sanitized.append(l)
-                    else:
-                        l = re.sub(r'[^A-Za-z0-9+/=]', '', l)
-                        if l: sanitized.append(l)
-                key_info["private_key"] = "\n".join(sanitized)
+                match = re.search(r'(-----BEGIN [^-]+-----)(.*?)(-----END [^-]+-----)', pk, re.DOTALL)
+                if match:
+                    header, body, footer = match.groups()
+                    body = re.sub(r'[^A-Za-z0-9+/=]', '', body)
+                    
+                    # Self-healing
+                    if len(body) % 4 != 0:
+                        if len(body) % 4 == 1:
+                            body = body[:-1]
+                        else:
+                            body += "=" * (4 - (len(body) % 4))
+
+                    key_info["private_key"] = f"{header}\n{body}\n{footer}"
 
             credentials = service_account.Credentials.from_service_account_info(
                 key_info, scopes=scopes
@@ -145,8 +150,8 @@ def get_player_list():
             
     return ["DB Connection Failed"]
 
-@st.cache_data(ttl=600)
-def get_full_team_data():
+# @st.cache_data(ttl=600)  <-- DISABLED FOR DEBUGGING
+def get_full_team_data_v2(ttl_hash=None):
     """
     Fetch ALL data for Team Dashboard aggregation.
     Returns the raw DataFrame with normalized columns.
@@ -161,6 +166,14 @@ def get_full_team_data():
                 # Normalize Columns
                 df.columns = [c.replace(' ', '_').replace(':', '_').replace('(', '_').replace(')', '').replace('-', '_') for c in df.columns]
                 
+                # --- DEBUG ---
+                if 'CMJ_ConcentricImpulseP1' in df.columns:
+                    print(f"[LOADER] After Fetch: P1 Type={df['CMJ_ConcentricImpulseP1'].dtype}")
+                    print(f"[LOADER] P1 Head: {df['CMJ_ConcentricImpulseP1'].head(3).tolist()}")
+                else:
+                    print("[LOADER] P1 Column NOT FOUND after normalization")
+                # -------------
+                
                 # Standardize Date
                 if 'Date' in df.columns:
                     df['Test_Date'] = pd.to_datetime(df['Date']).dt.date
@@ -168,6 +181,7 @@ def get_full_team_data():
                 # Ensure derived numeric columns exist (coerce errors to NaN)
                 numeric_candidates = [
                     'CMJ_Height_Imp_mom', 'CMJ_Height_Imp_mom_', 
+                    'CMJ_RSI_mod_Imp_mom_', 'CMJ_RSI_mod_Imp_mom', 
                     'SquatJ_Height_Imp_mom', 'SquatJ_Height_Imp_mom_',
                     'SLJ_Height_L', 'SLJ_Height_R', 'SLJ_Height_Imp_mom_', 
                     'SLJ_Height_L_Imp_mom_', 'SLJ_Height_R_Imp_mom_',
@@ -178,13 +192,22 @@ def get_full_team_data():
                     'HipAbd_L', 'HipAbd_R',
                     'HopTest_MeanRSI', 
                     'HipFlexion_Kicker_L', 'HipFlexion_Kicker_R',
-                    'CMJ_ConcentricImpulseP1', 'CMJ_ConcentricImpulseP2', 'CMJ_PeakLandingForce',
+                    'CMJ_PeakLandingForce',
                     'ShoulderIR_L', 'ShoulderIR_R', 'ShoulderER_L', 'ShoulderER_R'
                 ]
                 
                 for col in numeric_candidates:
+                    # PARANOID GUARD to prevent string destruction
+                    if 'ImpulseP1' in col or 'ImpulseP2' in col:
+                        continue
                     if col in df.columns:
                         df[col] = pd.to_numeric(df[col], errors='coerce')
+
+                # --- DEBUG ---
+                if 'CMJ_ConcentricImpulseP1' in df.columns:
+                    print(f"[LOADER] After Coercion Loop: P1 Type={df['CMJ_ConcentricImpulseP1'].dtype}")
+                    print(f"[LOADER] P1 Head: {df['CMJ_ConcentricImpulseP1'].head(3).tolist()}")
+                # -------------
                 
                 return df
                 
@@ -211,26 +234,46 @@ def load_player_data(player_name):
                 # Normalize Columns
                 df.columns = [c.replace(' ', '_').replace(':', '_').replace('(', '_').replace(')', '').replace('-', '_') for c in df.columns]
                 
-                if 'Date' in df.columns:
-                    df['Test_Date'] = pd.to_datetime(df['Date']).dt.date
+                # --- MANUAL COLUMN MAPPING (CRITICAL FIX) ---
+                # Map the actual raw headers to our internal standard names
+                rename_map = {
+                    'CMJ_P1ConcentricImpulse__Asmy_': 'CMJ_ConcentricImpulseP1',
+                    'CMJ_P2ConcentricImpulse__Asmy_': 'CMJ_ConcentricImpulseP2'
+                }
+                df.rename(columns=rename_map, inplace=True)
+                # --------------------------------------------
+
+                # Standardize Date
+                if 'Test_Date' not in df.columns and 'Date' in df.columns:
+                     df['Test_Date'] = pd.to_datetime(df['Date'], errors='coerce')
+                     df.dropna(subset=['Test_Date'], inplace=True)
+                     df['Test_Date'] = df['Test_Date'].dt.date
                 
-                # Ensure numerics
+                # Ensure derived numeric columns exist (coerce errors to NaN)
                 numeric_candidates = [
-                    'CMJ_Height_Imp_mom', 'CMJ_RSI_mod_Imp_mom', 'SquatJ_Height_Imp_mom', 
-                    'SLJ_Height_L', 'SLJ_Height_R',
-                    'Hamstring_Ecc_L', 'Hamstring_Ecc_R', 'Hamstring_Ecc_Imbalance',
+                    'CMJ_Height_Imp_mom', 'CMJ_Height_Imp_mom_', 
+                    'CMJ_RSI_mod_Imp_mom_', 'CMJ_RSI_mod_Imp_mom',
+                    'SquatJ_Height_Imp_mom', 'SquatJ_Height_Imp_mom_',
+                    'Hamstring_Ecc_L', 'Hamstring_Ecc_R',
                     'Hamstring_ISO_L', 'Hamstring_ISO_R',
-                    'HipAdd_L', 'HipAdd_R', 'HipAdd_Imbalance',
-                    'HipAdd_L', 'HipAdd_R', 'HipAdd_Imbalance',
+                    'HipAdd_L', 'HipAdd_R',
                     'HipAbd_L', 'HipAbd_R',
+                    # Note: P1/P2 columns are deliberately EXCLUDED here to preserve "8.3R" strings
+                    'SLJ_Height_L', 'SLJ_Height_R',
+                    'Hamstring_Ecc_Imbalance',
+                    'HipAdd_Imbalance',
                     'HopTest_MeanRSI',
                     'HipFlexion_Kicker_L', 'HipFlexion_Kicker_R', 'HipFlexion_Kicker_Imbalance',
-                    'CMJ_ConcentricImpulseP1', 'CMJ_ConcentricImpulseP2', 'CMJ_PeakLandingForce',
+                    'CMJ_PeakLandingForce',
                     'ShoulderIR_L', 'ShoulderIR_R', 'ShoulderIR_Imbalance',
                     'ShoulderER_L', 'ShoulderER_R', 'ShoulderER_Imbalance'
                 ]
                 for col in numeric_candidates:
                     if col in df.columns:
+                        # PARANOID GUARD: NEVER coerce P1/P2 if they accidentally slipped into this list
+                        if 'ConcentricImpulseP1' in col or 'ConcentricImpulseP2' in col:
+                            continue
+                            
                         df[col] = pd.to_numeric(df[col], errors='coerce')
 
                 # Return the whole DF for flexibility in the dashboard

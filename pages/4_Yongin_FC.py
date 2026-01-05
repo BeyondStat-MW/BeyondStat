@@ -55,6 +55,7 @@ if st.session_state.get('role') not in ['yongin', 'admin']:
 # --- Main App Logic ---
 import pandas as pd
 import numpy as np
+import re
 import plotly.express as px
 import plotly.graph_objects as go
 from yongin_fc.utils import yongin_data_loader as data_loader
@@ -109,7 +110,7 @@ if 'yf_view_mode' not in st.session_state:
 # Load Global Data for Sidebar Filters (Date Range)
 try:
     with st.spinner("Initializing..."):
-        df_global = data_loader.get_full_team_data()
+        df_global = data_loader.get_full_team_data_v2(ttl_hash=7)
         if not df_global.empty:
             min_date = df_global['Test_Date'].min()
             max_date = df_global['Test_Date'].max()
@@ -143,12 +144,20 @@ with st.sidebar:
     if 'yf_end_date' not in st.session_state:
         st.session_state['yf_end_date'] = max_date
 
+    # Sync picker state with main state variables if they differ (e.g. set by other callbacks)
+    if 'yf_start_date_picker' not in st.session_state:
+        st.session_state['yf_start_date_picker'] = st.session_state['yf_start_date']
+    
+    if 'yf_end_date_picker' not in st.session_state:
+        st.session_state['yf_end_date_picker'] = st.session_state['yf_end_date']
+        
     # Date Inputs with Bidirectional Sync
     d_col1, d_col2 = st.columns(2)
     with d_col1:
-        start_date = st.date_input("시작일", value=st.session_state['yf_start_date'], min_value=min_date, max_value=max_date, key='yf_start_date_picker', label_visibility="collapsed")
+        # Use key only, no value argument to avoid conflict
+        start_date = st.date_input("시작일", min_value=min_date, max_value=max_date, key='yf_start_date_picker', label_visibility="collapsed")
     with d_col2:
-        end_date = st.date_input("종료일", value=st.session_state['yf_end_date'], min_value=min_date, max_value=max_date, key='yf_end_date_picker', label_visibility="collapsed")
+        end_date = st.date_input("종료일", min_value=min_date, max_value=max_date, key='yf_end_date_picker', label_visibility="collapsed")
     
     # Update state from picker
     if start_date != st.session_state['yf_start_date']:
@@ -413,6 +422,7 @@ elif st.session_state['yf_view_mode'] == 'Player Dashboard':
             col_sj  = 'SquatJ_Height_Imp_mom_' if 'SquatJ_Height_Imp_mom_' in df_p.columns else 'SquatJ_Height_Imp_mom'
 
             # Helper for directional metrics (e.g., "8.3R", "5.2L")
+            # Verified to handle spaces like "7.5 L" via regex
             def parse_directional_metric(val):
                 if pd.isna(val): return 0
                 if isinstance(val, (int, float)): return val
@@ -433,8 +443,22 @@ elif st.session_state['yf_view_mode'] == 'Player Dashboard':
             # --- 🔎 Player Deep Dive Check (Latest Status) ---
             # Helper for Badge Style Delta
             def format_delta_html(current_val, prev_val, unit="", inverse=False, decimal=1, suffix_lr=False):
-                if pd.isna(current_val): return "N/A"
+                # Robust conversion
+                is_numeric = False
+                try: 
+                    current_val = float(current_val)
+                    is_numeric = True
+                except: pass
                 
+                try: prev_val = float(prev_val)
+                except: pass
+
+                if pd.isna(current_val) or (isinstance(current_val, str) and current_val.strip() == ""): return "N/A"
+                
+                # If not numeric after try-cast, return as string (Safe Fallback)
+                if not is_numeric:
+                    return f"{current_val} <small style='color:#888'>{unit}</small>"
+
                 # Suffix Logic (Left/Right)
                 display_val = current_val
                 lr_str = ""
@@ -487,6 +511,7 @@ elif st.session_state['yf_view_mode'] == 'Player Dashboard':
                     df_prev = df_hist.iloc[[1]]
                 else:
                     df_prev = pd.DataFrame() # No previous data
+                
                 latest_date = df_latest['Test_Date'].iloc[0]
                 st.markdown(f"<div style='margin-bottom:10px; font-size:14px; color:grey;'>Latest Test: {latest_date}</div>", unsafe_allow_html=True)
                 

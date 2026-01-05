@@ -394,6 +394,10 @@ def calculate_physical_tier(df, metrics_dict):
         
         for col in cols:
             if col in score_df.columns:
+                # Force numeric conversion to prevent TypeError with strings
+                # This fixes the crash when RSI or dates are string types
+                score_df[col] = pd.to_numeric(score_df[col], errors='coerce')
+                
                 clean_col = score_df[col].fillna(score_df[col].median())
                 
                 # Check directionality (assuming 'time' or 'asymmetry' is lower-is-better)

@@ -52,7 +52,15 @@ OPTIONS (
   max_bad_records = 0
 );
 
--- 6. All Data
+-- 6. All Data (Consolidated View)
+-- Key Columns:
+--   Basic: Player_ID, Name, Date, Height, Weight
+--   Nordbord: Hamstring_Ecc_L/R, Hamstring_ISO_L/R
+--   ForceFrame: HipAdd_L/R, HipAbd_L/R (and Imbalance), HipFlexion_Kicker_L/R (and Imbalance), ShoulderIR/ER_L/R
+--   CMJ: CMJ_Height_Imp_mom_, CMJ_RSI_mod_Imp_mom_, CMJ_ConcentricImpulseP1, CMJ_ConcentricImpulseP2, CMJ_PeakLandingForce
+--   SJ: SquatJ_Height_Imp_mom_
+--   HopTest: HopTest_MeanRSI
+--   Derived: EUR
 CREATE OR REPLACE EXTERNAL TABLE `yonginfc.vald_data.vald_all_data`
 OPTIONS (
   format = 'GOOGLE_SHEETS',
